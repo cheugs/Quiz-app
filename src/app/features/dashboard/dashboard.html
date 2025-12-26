@@ -1,0 +1,475 @@
+<!-- src/app/features/dashboard/dashboard.component.html -->
+<div class="dashboard" *ngIf="!isLoading()">
+
+  <!-- Quick Stats Row -->  
+<div class="stats-grid">
+  <!-- Total Students -->
+  <div class="stat-tile student-tile">
+    <div class="tile-header">
+      <div class="tile-icon">
+        <div class="icon-wrapper">
+          <app-users-icon></app-users-icon>
+        </div>
+        <div class="icon-glow"></div>
+      </div>
+      <div class="trend-indicator" [class.negative]="(dashboardStats()?.studentGrowthRate || 0) < 0">
+        <app-trending-up-icon *ngIf="(dashboardStats()?.studentGrowthRate || 0) >= 0"></app-trending-up-icon>
+        <app-trending-down-icon *ngIf="(dashboardStats()?.studentGrowthRate || 0) < 0"></app-trending-down-icon>
+        <span>{{ (dashboardStats()?.studentGrowthRate || 0) >= 0 ? '+' : '' }}{{ dashboardStats()?.studentGrowthRate || 0 }}%</span>
+      </div>
+    </div>
+    
+    <div class="tile-content">
+      <div class="tile-value">{{ dashboardStats()?.totalStudents || 0 }}</div>
+      <div class="tile-label">Total Students</div>
+    </div>
+    
+    <div class="tile-graph">
+      <div class="graph-line">
+        <svg width="100%" height="40" viewBox="0 0 200 40">
+          <path d="M0 30 C40 25, 60 20, 100 18 S160 15, 200 12" 
+                fill="none" 
+                stroke="url(#student-gradient)" 
+                stroke-width="3" 
+                stroke-linecap="round"/>
+          <defs>
+            <linearGradient id="student-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#4a5f52" stop-opacity="0.8"/>
+              <stop offset="100%" stop-color="#6b8e7f" stop-opacity="0.8"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Quizzes -->
+  <div class="stat-tile quiz-tile">
+    <div class="tile-header">
+      <div class="tile-icon">
+        <div class="icon-wrapper">
+          <app-quiz-icon></app-quiz-icon>
+        </div>
+        <div class="icon-glow"></div>
+      </div>
+      <div class="activity-badge">
+        {{ dashboardStats()?.quizzesThisMonth || 0 }} this month
+      </div>
+    </div>
+    
+    <div class="tile-content">
+      <div class="tile-value">{{ dashboardStats()?.activeQuizzes || 0 }}</div>
+      <div class="tile-label">Active Quizzes</div>
+    </div>
+    
+    <div class="tile-graph">
+      <div class="graph-dots">
+        <div class="dot" *ngFor="let i of [0,1,2,3,4,5]" [style.animation-delay]="i*0.1+'s'"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Responses -->
+  <div class="stat-tile responses-tile">
+    <div class="tile-header">
+      <div class="tile-icon">
+        <div class="icon-wrapper">
+          <app-bar-chart-icon></app-bar-chart-icon>
+        </div>
+        <div class="icon-glow"></div>
+      </div>
+      <div class="activity-badge">
+        {{ formatNumber(dashboardStats()?.responsesThisMonth || 0) }} this month
+      </div>
+    </div>
+    
+    <div class="tile-content">
+      <div class="tile-value">{{ formatNumber(dashboardStats()?.totalResponses || 0) }}</div>
+      <div class="tile-label">Total Responses</div>
+    </div>
+    
+    <div class="tile-graph">
+      <div class="spark-bars">
+        <div class="spark-bar" *ngFor="let i of [0,1,2,3,4]" 
+             [style.height]="30 + i*15 + '%'"
+             [style.animation-delay]="i*0.15+'s'"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- System Health -->
+  <div class="stat-tile system-tile">
+    <div class="tile-header">
+      <div class="tile-icon">
+        <div class="icon-wrapper">
+          <app-activity-icon></app-activity-icon>
+        </div>
+        <div class="pulse-ring"></div>
+      </div>
+      <div class="status-badge">
+        <span class="status-dot"></span>
+        Operational
+      </div>
+    </div>
+    
+    <div class="tile-content">
+      <div class="tile-value">{{ dashboardStats()?.systemUptime || 99.9 }}%</div>
+      <div class="tile-label">System Health</div>
+    </div>
+    
+    <div class="tile-graph">
+      <div class="health-wave">
+        <svg width="100%" height="60" viewBox="0 0 200 60">
+          <path d="M0 45 
+                   C20 40, 40 35, 60 30 
+                   C80 25, 120 20, 140 25 
+                   C160 30, 180 35, 200 40" 
+                fill="none" 
+                stroke="rgba(255,255,255,0.3)" 
+                stroke-width="2"/>
+          <path d="M0 45 
+                   C20 40, 40 35, 60 30 
+                   C80 25, 120 20, 140 25 
+                   C160 30, 180 35, 200 40" 
+                fill="none" 
+                stroke="white" 
+                stroke-width="2"
+                stroke-dasharray="200"
+                stroke-dashoffset="200"
+                class="wave-path">
+            <animate attributeName="stroke-dashoffset" 
+                     from="200" 
+                     to="0" 
+                     dur="2s" 
+                     begin="0s" 
+                     repeatCount="indefinite"/>
+          </path>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- Main Content Grid --> 
+<div class="modern-grid">
+  <!-- Participation Trends - Modern -->
+  <div class="modern-card participation-modern">
+    <div class="modern-card-header">
+      <div class="header-main">
+        <h3>Participation Trends</h3>
+        <div class="header-subtitle">Student engagement analytics</div>
+      </div>
+      <select class="modern-select">
+        <option>Last 7 Days</option>
+        <option>Last 30 Days</option>
+        <option>This Semester</option>
+      </select>
+    </div>
+    
+    <div class="modern-chart-container">
+      <div class="modern-sparkline">
+        <svg width="100%" height="80" viewBox="0 0 400 80">
+          <path d="M0,60 C40,55,80,45,120,40 S200,35,240,30 T320,25 L400,20" 
+                fill="none" 
+                stroke="url(#participation-gradient)" 
+                stroke-width="3" 
+                stroke-linecap="round"/>
+          <path d="M0,60 C40,55,80,45,120,40 S200,35,240,30 T320,25 L400,20" 
+                fill="none" 
+                stroke="rgba(107, 142, 127, 0.3)" 
+                stroke-width="1" 
+                stroke-linecap="round" 
+                stroke-dasharray="2,2"/>
+          <defs>
+            <linearGradient id="participation-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#4a5f52"/>
+              <stop offset="100%" stop-color="#6b8e7f"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="modern-bars">
+        <div class="modern-bar" *ngFor="let day of participationTrend()?.data; let i = index" 
+             [style.height]="day.participationRate + '%'"
+             [style.background]="i === participationTrend()!.data.length - 1 ? 'linear-gradient(to top, #4a5f52, #6b8e7f)' : 'linear-gradient(to top, #e5e5e5, #e0e0e0)'"
+             [class.active]="i === participationTrend()!.data.length - 1">
+          <div class="bar-value">{{ day.participationRate }}%</div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modern-stats-grid">
+      <div class="modern-stat">
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <circle cx="10" cy="10" r="8" fill="rgba(107, 142, 127, 0.1)" stroke="#6b8e7f" stroke-width="1.5"/>
+              <path d="M6 10 L9 13 L14 7" stroke="#6b8e7f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Avg. Participation</div>
+          <div class="stat-value">{{ dashboardStats()?.quizCompletionRate || 0 }}%</div>
+        </div>
+      </div>
+      
+      <div class="modern-stat">
+        <div class="stat-icon-wrapper">
+          <div class="stat-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20">
+              <circle cx="10" cy="10" r="8" fill="rgba(74, 95, 82, 0.1)" stroke="#4a5f52" stroke-width="1.5"/>
+              <polyline points="5,10 10,15 15,7" stroke="#4a5f52" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="stat-content">
+          <div class="stat-label">Submission Rate</div>
+          <div class="stat-value">{{ dashboardStats()?.submissionRate || 0 }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Course Performance - Modern -->
+  <div class="modern-card performance-modern">
+    <div class="modern-card-header">
+      <div class="header-main">
+        <h3>Top Performing Courses</h3>
+        <div class="header-subtitle">Ranked by average scores</div>
+      </div>
+      <button class="modern-btn view-btn">
+        <span>View All</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="performance-modern-list">
+      <div class="performance-modern-item" *ngFor="let course of coursePerformance() | slice:0:4; let i = index">
+        <div class="rank-modern">
+          <div class="rank-number" [class.top-rank]="i < 3">{{ i + 1 }}</div>
+        </div>
+        <div class="course-modern-info">
+          <div class="course-modern-name">{{ course.courseName }}</div>
+          <div class="course-modern-meta">
+            <span class="meta-modern-item">
+              <div class="meta-icon">
+                <app-users-icon [size]="14"></app-users-icon>
+              </div>
+              {{ course.totalStudents }} students
+            </span>
+            <div class="course-modern-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width]="course.averageScore + '%'"></div>
+              </div>
+              <span class="progress-text">{{ course.averageScore }}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Quizzes - Modern -->
+  <div class="modern-card quizzes-modern">
+    <div class="modern-card-header">
+      <div class="header-main">
+        <h3>Recent Quizzes</h3>
+        <div class="header-subtitle">Latest quiz activities</div>
+      </div>
+    </div>
+    
+    <div class="quizzes-modern-list">
+      <div class="quiz-modern-item" *ngFor="let quiz of recentQuizzes()">
+        <div class="quiz-modern-icon">
+          <div class="icon-circle" [style.background]="getQuizStatusColor(quiz.status)">
+            <app-quiz-icon></app-quiz-icon>
+          </div>
+        </div>
+        <div class="quiz-modern-content">
+          <div class="quiz-modern-header">
+            <h4>{{ quiz.title }}</h4>
+            <span class="quiz-modern-status" [style.background]="getQuizStatusColor(quiz.status)">
+              {{ quiz.status }}
+            </span>
+          </div>
+          <div class="quiz-modern-meta">
+            <span class="meta-modern-item">
+              <div class="meta-icon">
+                <app-calendar-icon [size]="14"></app-calendar-icon>
+              </div>
+              {{ formatDate(quiz.endDate) }}
+            </span>
+            <span class="meta-modern-item">
+              <div class="meta-icon">
+                <app-clock-icon [size]="14"></app-clock-icon>
+              </div>
+              {{ quiz.duration }} min
+            </span>
+          </div>
+        </div>
+        <div class="quiz-modern-stats">
+          <div class="stat-modern-bubble">
+            <div class="bubble-value">{{ quiz.totalAttempts }}</div>
+            <div class="bubble-label">Attempts</div>
+          </div>
+          <div class="stat-modern-bubble">
+            <div class="bubble-value">{{ quiz.averageScore || 0 }}%</div>
+            <div class="bubble-label">Avg. Score</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Class Performance - Modern -->
+  <div class="modern-card classes-modern">
+    <div class="modern-card-header">
+      <div class="header-main">
+        <h3>Class Performance</h3>
+        <div class="header-subtitle">Ranked by overall performance</div>
+      </div>
+      <select class="modern-select">
+        <option>This Semester</option>
+        <option>Last Semester</option>
+        <option>This Academic Year</option>
+      </select>
+    </div>
+    
+    <div class="classes-modern-list">
+      <div class="class-modern-item" *ngFor="let class of classPerformance()">
+        <div class="class-modern-rank">
+          <div class="medal-circle" [class.top-3]="class.rank <= 3">
+            {{ class.rank }}
+          </div>
+        </div>
+        <div class="class-modern-info">
+          <div class="class-modern-name">{{ class.className }}</div>
+          <div class="class-modern-department">{{ class.department }}</div>
+          <div class="class-modern-trend">
+            <span class="trend-indicator" [style.color]="getTrendColor(class.improvement)">
+              <app-trending-up-icon *ngIf="class.improvement >= 0" [size]="12"></app-trending-up-icon>
+              <app-trending-down-icon *ngIf="class.improvement < 0" [size]="12"></app-trending-down-icon>
+              {{ class.improvement >= 0 ? '+' : '' }}{{ class.improvement }}%
+            </span>
+          </div>
+        </div>
+        <div class="class-modern-score">
+          <div class="score-circle" [style.border-color]="getPerformanceColor(class.averageScore)">
+            <div class="score-value">{{ class.averageScore }}%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions - Modern -->
+  <div class="modern-card actions-modern">
+    <div class="modern-card-header">
+      <div class="header-main">
+        <h3>Quick Actions</h3>
+        <div class="header-subtitle">Frequently used features</div>
+      </div>
+    </div>
+    
+    <div class="actions-modern-grid">
+      <button class="action-modern-btn" routerLink="/quiz-management/create">
+        <div class="action-modern-icon create-icon">
+          <app-quiz-icon></app-quiz-icon>
+          <div class="icon-glow"></div>
+        </div>
+        <span class="action-modern-label">Create Quiz</span>
+        <div class="action-modern-arrow">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 8H12M12 8L8 4M12 8L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </button>
+      
+      <button class="action-modern-btn" routerLink="/question-bank">
+        <div class="action-modern-icon manage-icon">
+          <app-grid-icon></app-grid-icon>
+          <div class="icon-glow"></div>
+        </div>
+        <span class="action-modern-label">Manage Questions</span>
+        <div class="action-modern-arrow">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 8H12M12 8L8 4M12 8L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </button>
+      
+      <button class="action-modern-btn" routerLink="/student-management">
+        <div class="action-modern-icon students-icon">
+          <app-users-icon></app-users-icon>
+          <div class="icon-glow"></div>
+        </div>
+        <span class="action-modern-label">View Students</span>
+        <div class="action-modern-arrow">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 8H12M12 8L8 4M12 8L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </button>
+      
+      <button class="action-modern-btn" routerLink="/response-viewing">
+        <div class="action-modern-icon responses-icon">
+          <app-bar-chart-icon></app-bar-chart-icon>
+          <div class="icon-glow"></div>
+        </div>
+        <span class="action-modern-label">View Responses</span>
+        <div class="action-modern-arrow">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M4 8H12M12 8L8 4M12 8L8 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </button>
+    </div>
+  </div>
+
+  <!-- Recent Notifications - Modern -->
+  <div class="modern-card notifications-modern">
+    <div class="modern-card-header">
+      <div class="header-main">
+        <h3>Recent Notifications</h3>
+        <div class="header-subtitle">Latest updates and alerts</div>
+      </div>
+      <button class="modern-btn view-btn" routerLink="/notifications-management">
+        <span>View All</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <path d="M6 12L10 8L6 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    
+    <div class="notifications-modern-list">
+      <div class="notification-modern-item" *ngFor="let notification of recentNotifications()">
+        <div class="notification-modern-icon">
+          <div class="bell-ring">
+            <app-bell-icon></app-bell-icon>
+            <div class="ring-wave"></div>
+          </div>
+        </div>
+        <div class="notification-modern-content">
+          <div class="notification-modern-title">
+            <h4>{{ notification.title }}</h4>
+            <span class="notification-modern-time">{{ formatDate(notification.createdAt) }}</span>
+          </div>
+          <p class="notification-modern-message">{{ notification.message }}</p>
+          <div class="notification-modern-status" [class.sent]="notification.status === 'sent'">
+            {{ notification.status }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- Loading State -->
+<div class="loading-state" *ngIf="isLoading()">
+  <div class="loading-spinner"></div>
+  <p>Loading dashboard data...</p>
+</div>

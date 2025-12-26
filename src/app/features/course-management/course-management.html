@@ -1,0 +1,549 @@
+<div class="course-management">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="page-title"> 
+        <h1>Course Management</h1>
+        <span class="badge">{{ totalCount() }} courses</span>
+      </div>
+      <p class="page-description">Manage courses, assign classes, and configure academic settings</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="exportCourses()">
+        <app-download-icon [size]="16"></app-download-icon>
+        Export
+      </button>
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        <app-add-icon [size]="16"></app-add-icon>
+        Add Course
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters and Search -->
+  <div class="filters-section">
+    <div class="search-box"> 
+      <input 
+        type="text" 
+        placeholder="Search courses by code, name, or department..." 
+        [ngModel]="searchTerm()"
+        (ngModelChange)="searchTerm.set($event)"
+        (keyup.enter)="onSearch()"
+      />
+      <button class="btn-search" (click)="onSearch()">Search</button>
+    </div>
+    
+    <div class="filters-toggle" [class.active]="showFilters()" (click)="toggleFilters()">
+      <app-filter-icon [size]="16"></app-filter-icon>
+      Filters
+      <span class="chevron">
+        @if (showFilters()) {
+          <app-chevron-up-icon [size]="16"></app-chevron-up-icon>
+        } @else {
+          <app-chevron-down-icon [size]="16"></app-chevron-down-icon>
+        }
+      </span>
+    </div>
+  </div>
+
+  <!-- Filter Panel -->
+  @if (showFilters()) {
+    <div class="filter-panel">
+      <div class="filter-grid">
+        <div class="filter-group">
+          <label>Department</label>
+          <select [ngModel]="departmentFilter()" (ngModelChange)="departmentFilter.set($event)">
+            <option value="">All Departments</option>
+            @for (dept of departments(); track dept) {
+              <option [value]="dept">{{ dept }}</option>
+            }
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>Academic Year</label>
+          <select [ngModel]="academicYearFilter()" (ngModelChange)="academicYearFilter.set($event)">
+            <option value="">All Years</option>
+            @for (year of academicYears(); track year.id) {
+              <option [value]="year.id">{{ year.name }}</option>
+            }
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>Semester</label>
+          <select [ngModel]="semesterFilter()" (ngModelChange)="semesterFilter.set($event)">
+            <option value="">All Semesters</option>
+            @for (semester of semesters(); track semester.id) {
+              <option [value]="semester.id">{{ semester.name }}</option>
+            }
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>Status</label>
+          <select [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+            <option value="">All Status</option>
+            <option [value]="true">Active</option>
+            <option [value]="false">Inactive</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="filter-actions">
+        <button class="btn btn-outline" (click)="clearFilters()">Clear All</button>
+        <button class="btn btn-primary" (click)="applyFilters()">Apply Filters</button>
+      </div>
+    </div>
+  }
+  
+  <!-- Bulk Actions -->
+  @if (selectedCount() > 0) {
+    <div class="bulk-actions-bar">
+      <div class="bulk-info">
+        <span class="count">{{ selectedCount() }} selected</span>
+      </div>
+      <div class="bulk-controls">
+        <select [ngModel]="bulkAction()" (ngModelChange)="bulkAction.set($event)" class="bulk-select">
+          <option value="">Bulk Actions</option>
+          <option value="activate">Activate</option>
+          <option value="deactivate">Deactivate</option>
+          <option value="delete">Delete</option>
+        </select>
+        <button class="btn btn-primary" (click)="executeBulkAction()">Apply</button>
+      </div>
+    </div>
+  }
+
+  <!-- Loading State -->
+  @if (loading()) {
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading courses...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @if (error()) {
+    <div class="error-state">
+      <app-x-icon [size]="24" color="#ef4444"></app-x-icon>
+      <p>{{ error() }}</p>
+      <button class="btn btn-outline" (click)="courseService.refreshCourses()">
+        <app-refresh-icon [size]="16"></app-refresh-icon>
+        Retry
+      </button>
+    </div>
+  }
+
+  <!-- Courses Table -->
+  @if (!loading() && !error() && filteredCourses().length > 0) {
+    <div class="courses-table">
+      <table>
+        <thead>
+          <tr>
+            <th class="checkbox-col">
+              <input 
+                type="checkbox" 
+                [checked]="allSelected()"
+                (change)="toggleSelectAll()"
+              />
+            </th>
+            <th>Code</th>
+            <th>Course Name</th>
+            <th>Department</th>
+            <th>Classes</th>
+            <th>Students</th>
+            <th>Quizzes</th>
+            <th>Status</th>
+            <th>Semester</th>
+            <th class="actions-col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (course of filteredCourses(); track course.id) {
+            <tr [class.selected]="selectedCourses().has(course.id)" (click)="viewCourseDetails(course)">
+              <td class="checkbox-col" (click)="$event.stopPropagation()">
+                <input 
+                  type="checkbox" 
+                  [checked]="selectedCourses().has(course.id)"
+                  (change)="toggleCourseSelection(course.id, $event)"
+                />
+              </td>
+              <td class="course-code">
+                <strong>{{ course.code }}</strong>
+              </td>
+              <td class="course-name">
+                <div class="course-title">{{ course.name }}</div>
+                @if (course.description) {
+                  <div class="course-description">{{ course.description | truncate:60 }}</div>
+                }
+              </td>
+              <td>
+                <span class="department-badge" [ngClass]="getDepartmentColor(course.department)">
+                  {{ course.department }}
+                </span>
+              </td>
+              <td>
+                <div class="stats-cell">
+                  <app-users-icon [size]="16"></app-users-icon>
+                  {{ (course.classIds ? course.classIds.length : 0) || 0 }} classes
+                </div>
+              </td>
+              <td>
+                <div class="stats-cell">
+                  <app-users-icon [size]="16"></app-users-icon>
+                  {{ course.studentCount || 0 }} students
+                </div>
+              </td>
+              <td>
+                <div class="stats-cell">
+                  <app-quiz-icon [size]="16"></app-quiz-icon>
+                  {{ course.quizCount || 0 }} quizzes
+                </div>
+              </td>
+              <td>
+                <span class="status-badge" [class.active]="course.isActive" [class.inactive]="!course.isActive">
+                  {{ course.isActive ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td>
+                <div class="semester-cell">
+                  <div class="semester-info">
+                    <div class="academic-year">{{ getAcademicYearName(course.academicYearId) }}</div>
+                    <div class="semester-details">
+                      <span class="semester-badge">{{ getSemesterInfo(course) }}</span>
+                      @if (course.semesterNumber) {
+                        <span class="semester-number">Sem {{ course.semesterNumber }}</span>
+                      }
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td class="actions-col" (click)="$event.stopPropagation()">
+                <div class="action-buttons">
+                  <button class="btn-icon" (click)="openEditModal(course)" title="Edit">
+                    <app-edit-icon [size]="16"></app-edit-icon>
+                  </button>
+                  <button class="btn-icon btn-danger" (click)="openDeleteModal(course)" title="Delete">
+                    <app-delete-icon [size]="16"></app-delete-icon>
+                  </button>
+                  <button class="btn-icon" (click)="viewCourseDetails(course)" title="View Details">
+                    <app-eye-icon [size]="16"></app-eye-icon>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination">
+      <div class="pagination-info">
+        Showing {{ filteredCourses().length }} of {{ totalCount() }} courses
+      </div>
+      <div class="pagination-controls">
+        <button class="btn-pagination" [disabled]="true">
+          <app-chevron-up-icon [size]="16" [style.transform]="'rotate(-90deg)'"></app-chevron-up-icon>
+          Previous
+        </button>
+        <div class="page-numbers">
+          <span class="page-number active">1</span>
+          <span class="page-number">2</span>
+          <span class="page-number">3</span>
+          <span class="ellipsis">...</span>
+        </div>
+        <button class="btn-pagination">
+          Next
+          <app-chevron-up-icon [size]="16" [style.transform]="'rotate(90deg)'"></app-chevron-up-icon>
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @if (!loading() && !error() && filteredCourses().length === 0) {
+    <div class="empty-state">
+      <app-course-icon [size]="48"></app-course-icon>
+      <h3>No courses found</h3>
+      <p>Try adjusting your search or filters, or create a new course.</p>
+      <button class="btn btn-primary" (click)="openCreateModal()">
+        <app-add-icon [size]="16"></app-add-icon>
+        Create Course
+      </button>
+    </div>
+  }
+
+  <!-- Create Course Modal -->
+  @if (showCreateModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Create New Course</h2>
+          <button class="btn-close" (click)="closeModals()">
+            <app-x-icon [size]="20"></app-x-icon>
+          </button>
+        </div>
+        
+        <form [formGroup]="courseForm" (ngSubmit)="createCourse()">
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="code">Course Code *</label>
+                <input type="text" id="code" formControlName="code" placeholder="e.g., CS101">
+                @if (courseForm.get('code')?.invalid && courseForm.get('code')?.touched) {
+                  <div class="error">Course code is required</div>
+                }
+              </div>
+              
+              <div class="form-group">
+                <label for="name">Course Name *</label>
+                <input type="text" id="name" formControlName="name" placeholder="e.g., Introduction to Computer Science">
+                @if (courseForm.get('name')?.invalid && courseForm.get('name')?.touched) {
+                  <div class="error">Course name is required</div>
+                }
+              </div>
+              
+              <div class="form-group full-width">
+                <label for="description">Description</label>
+                <textarea id="description" formControlName="description" rows="3" placeholder="Course description..."></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label for="credits">Credits *</label>
+                <input type="number" id="credits" formControlName="credits" min="1" max="10">
+                @if (courseForm.get('credits')?.invalid) {
+                  <div class="error">Credits must be between 1 and 10</div>
+                }
+              </div>
+              
+              <div class="form-group">
+                <label for="department">Department *</label>
+                <select id="department" formControlName="department">
+                  <option value="">Select Department</option>
+                  @for (dept of departments(); track dept) {
+                    <option [value]="dept">{{ dept }}</option>
+                  }
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="departmentCode">Department Code *</label>
+                <input type="text" id="departmentCode" formControlName="departmentCode" placeholder="e.g., CS">
+              </div>
+              
+              <div class="form-group">
+                <label for="academicYearId">Academic Year *</label>
+                <select id="academicYearId" formControlName="academicYearId">
+                  <option value="">Select Year</option>
+                  @for (year of academicYears(); track year.id) {
+                    <option [value]="year.id">{{ year.name }}</option>
+                  }
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="semesterId">Semester</label>
+                <select id="semesterId" formControlName="semesterId">
+                  <option value="">Select Semester</option>
+                  @for (semester of semesters(); track semester.id) {
+                    <option [value]="semester.id">{{ semester.name }}</option>
+                  }
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="semesterNumber">Semester Number *</label>
+                <input type="number" id="semesterNumber" formControlName="semesterNumber" min="1" max="3">
+              </div>
+              
+              <div class="form-group">
+                <label for="startDate">Start Date *</label>
+                <input type="date" id="startDate" formControlName="startDate">
+              </div>
+              
+              <div class="form-group">
+                <label for="endDate">End Date *</label>
+                <input type="date" id="endDate" formControlName="endDate">
+              </div>
+              
+              <div class="form-group full-width">
+                <label>Assigned Classes</label>
+                <div class="multi-select">
+                  @for (class of availableClasses(); track class.id) {
+                    <label class="checkbox-label">
+                      <input type="checkbox" [value]="class.id" 
+                        [checked]="courseForm.value.classIds.includes(class.id)"
+                        (change)="toggleClassSelection(class.id)">
+                      {{ class.name }} ({{ class.code }})
+                    </label>
+                  }
+                </div>
+              </div>
+              
+              <div class="form-group full-width">
+                <label>Instructors</label>
+                <div class="multi-select">
+                  @for (instructor of availableInstructors(); track instructor.id) {
+                    <label class="checkbox-label">
+                      <input type="checkbox" [value]="instructor.id"
+                        [checked]="courseForm.value.instructorIds.includes(instructor.id)"
+                        (change)="toggleInstructorSelection(instructor.id)">
+                      {{ instructor.firstName }} {{ instructor.lastName }}
+                    </label>
+                  }
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" formControlName="isActive">
+                  Active Course
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="closeModals()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="courseForm.invalid || isSubmitting()">
+              @if (isSubmitting()) {
+                <span class="spinner-small"></span>
+              } @else {
+                Create Course
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Edit Course Modal -->
+  @if (showEditModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Edit Course</h2>
+          <button class="btn-close" (click)="closeModals()">
+            <app-x-icon [size]="20"></app-x-icon>
+          </button>
+        </div>
+        
+        <form [formGroup]="courseForm" (ngSubmit)="updateCourse()">
+          <div class="modal-body">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="edit-code">Course Code *</label>
+                <input type="text" id="edit-code" formControlName="code">
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-name">Course Name *</label>
+                <input type="text" id="edit-name" formControlName="name">
+              </div>
+              
+              <div class="form-group full-width">
+                <label for="edit-description">Description</label>
+                <textarea id="edit-description" formControlName="description" rows="3"></textarea>
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-credits">Credits *</label>
+                <input type="number" id="edit-credits" formControlName="credits" min="1" max="10">
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-department">Department *</label>
+                <select id="edit-department" formControlName="department">
+                  @for (dept of departments(); track dept) {
+                    <option [value]="dept">{{ dept }}</option>
+                  }
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-departmentCode">Department Code *</label>
+                <input type="text" id="edit-departmentCode" formControlName="departmentCode">
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-academicYearId">Academic Year *</label>
+                <select id="edit-academicYearId" formControlName="academicYearId">
+                  @for (year of academicYears(); track year.id) {
+                    <option [value]="year.id">{{ year.name }}</option>
+                  }
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-semesterId">Semester</label>
+                <select id="edit-semesterId" formControlName="semesterId">
+                  <option value="">Select Semester</option>
+                  @for (semester of semesters(); track semester.id) {
+                    <option [value]="semester.id">{{ semester.name }}</option>
+                  }
+                </select>
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-semesterNumber">Semester Number *</label>
+                <input type="number" id="edit-semesterNumber" formControlName="semesterNumber" min="1" max="3">
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-startDate">Start Date *</label>
+                <input type="date" id="edit-startDate" formControlName="startDate">
+              </div>
+              
+              <div class="form-group">
+                <label for="edit-endDate">End Date *</label>
+                <input type="date" id="edit-endDate" formControlName="endDate">
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline" (click)="closeModals()">Cancel</button>
+            <button type="submit" class="btn btn-primary" [disabled]="courseForm.invalid || isSubmitting()">
+              @if (isSubmitting()) {
+                <span class="spinner-small"></span>
+              } @else {
+                Update Course
+              }
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  }
+
+  <!-- Delete Confirmation Modal -->
+  @if (showDeleteModal()) {
+    <div class="modal-overlay" (click)="closeModals()">
+      <div class="modal modal-sm" (click)="$event.stopPropagation()">
+        <div class="modal-header">
+          <h2>Delete Course</h2>
+          <button class="btn-close" (click)="closeModals()">
+            <app-x-icon [size]="20"></app-x-icon>
+          </button>
+        </div>
+        
+        <div class="modal-body">
+          <div class="delete-warning">
+            <app-delete-icon [size]="32" color="#ef4444"></app-delete-icon>
+            <h3>Are you sure?</h3>
+            <p>You are about to delete <strong>{{ selectedCourse()?.code }} - {{ selectedCourse()?.name }}</strong>.</p>
+            <p class="text-danger">This action cannot be undone. All associated data will be permanently removed.</p>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" (click)="closeModals()">Cancel</button>
+          <button type="button" class="btn btn-danger" (click)="deleteCourse()">Delete Course</button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

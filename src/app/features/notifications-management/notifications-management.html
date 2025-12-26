@@ -1,0 +1,475 @@
+<div class="notifications-management" *ngIf="!isLoading()">
+  <!-- Header -->
+  <div class="modern-header">
+    <div class="header-left">
+      <h1>Notifications Management</h1>
+      <p>Send and manage push notifications to students</p>
+    </div>
+    <div class="header-actions">
+      <div class="search-box">
+        <input 
+          type="text" 
+          placeholder="Search notifications..." 
+          [(ngModel)]="searchQuery"
+          (input)="refreshData()">
+        <button class="search-btn">
+          <app-search-icon [size]="16"></app-search-icon>
+        </button>
+      </div>
+      <button class="modern-btn primary" (click)="showNewNotificationModal.set(true)">
+        <app-bell-icon [size]="16"></app-bell-icon>
+        Send Notification
+      </button>
+      <button class="icon-btn" (click)="refreshData()" title="Refresh">
+        <app-refresh-icon [size]="18"></app-refresh-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="modern-tabs">
+    <button 
+      class="tab-btn" 
+      [class.active]="selectedTab() === 'notifications'"
+      (click)="switchTab('notifications')">
+      <app-bell-icon [size]="16"></app-bell-icon>
+      Notifications
+      <span class="tab-badge">{{ filteredNotifications().length }}</span>
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="selectedTab() === 'templates'"
+      (click)="switchTab('templates')">
+      <app-filter-icon [size]="16"></app-filter-icon>
+      Templates
+      <span class="tab-badge">{{ templates().length }}</span>
+    </button>
+    <button 
+      class="tab-btn" 
+      [class.active]="selectedTab() === 'stats'"
+      (click)="switchTab('stats')">
+      <app-trending-up-icon [size]="16"></app-trending-up-icon>
+      Statistics
+    </button>
+  </div>
+
+  <!-- Notifications Tab -->
+  <div *ngIf="selectedTab() === 'notifications'" class="tab-content">
+    <!-- Filters -->
+    <div class="modern-filters">
+      <div class="filter-group">
+        <label>Status:</label>
+        <select [(ngModel)]="statusFilter" (change)="refreshData()">
+          <option value="all">All Status</option>
+          <option value="sent">Sent</option>
+          <option value="scheduled">Scheduled</option>
+          <option value="sending">Sending</option>
+          <option value="failed">Failed</option>
+          <option value="draft">Draft</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Type:</label>
+        <select [(ngModel)]="typeFilter" (change)="refreshData()">
+          <option value="all">All Types</option>
+          <option *ngFor="let type of notificationTypes" [value]="type">
+            {{ type.replace('_', ' ') | titlecase }}
+          </option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Date Range:</label>
+        <input type="date" [(ngModel)]="dateRangeFilter().start" (change)="refreshData()">
+        <span>to</span>
+        <input type="date" [(ngModel)]="dateRangeFilter().end" (change)="refreshData()">
+      </div>
+    </div>
+
+    <!-- Notifications List -->
+    <div class="notifications-list">
+      <div class="notifications-header">
+        <div class="column-title">Notification</div>
+        <div class="column-title">Recipients</div>
+        <div class="column-title">Channels</div>
+        <div class="column-title">Status</div>
+        <div class="column-title">Scheduled</div>
+        <div class="column-title">Actions</div>
+      </div>
+
+      <div class="notifications-body">
+        <div class="notification-item" *ngFor="let notification of filteredNotifications()">
+          <div class="notification-info">
+            <div class="notification-icon">
+              <app-bell-icon [size]="20"></app-bell-icon>
+            </div>
+            <div class="notification-content">
+              <h4>{{ notification.title }}</h4>
+              <p class="notification-message">{{ notification.message }}</p>
+              <div class="notification-meta">
+                <span class="meta-item">
+                  <app-calendar-icon [size]="12"></app-calendar-icon>
+                  {{ formatDate(notification.createdAt) }}
+                </span>
+                <span class="meta-item">
+                  <app-clock-icon [size]="12"></app-clock-icon>
+                  {{ formatDate(notification.sendAt) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="recipient-info">
+            <div class="recipient-count">
+              <app-users-icon [size]="16"></app-users-icon>
+              {{ notification.estimatedRecipientCount }}
+            </div>
+            <div class="recipient-type">
+              {{ notification.recipientType | titlecase }}
+            </div>
+          </div>
+
+          <div class="channels-info">
+            <div class="channels-badges">
+              <span *ngFor="let channel of notification.channels" 
+                    class="channel-badge"
+                    [class.in-app]="channel === 'in_app'"
+                    [class.email]="channel === 'email'"
+                    [class.sms]="channel === 'sms'">
+                {{ channel === 'in_app' ? 'In-App' : channel | titlecase }}
+              </span>
+            </div>
+          </div>
+
+          <div class="status-info">
+            <span class="status-badge" [style.background-color]="getStatusColor(notification.status)">
+              {{ getStatusText(notification.status) }}
+            </span>
+            <div class="status-stats" *ngIf="notification.status === 'sent'">
+              <div class="stat-row">
+                <span>Delivered:</span>
+                <span>{{ notification.deliveredCount }}</span>
+              </div>
+              <div class="stat-row">
+                <span>Read:</span>
+                <span>{{ notification.readCount }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="schedule-info">
+            {{ formatDate(notification.sendAt) }}
+          </div>
+
+          <div class="actions-info">
+            <div class="action-buttons">
+              <button class="icon-btn small" title="View Details">
+                <app-eye-icon [size]="14"></app-eye-icon>
+              </button>
+              <button *ngIf="notification.status === 'failed'" 
+                      class="icon-btn small" 
+                      title="Resend"
+                      (click)="resendNotification(notification.id)">
+                <app-refresh-icon [size]="14"></app-refresh-icon>
+              </button>
+              <button *ngIf="notification.status === 'scheduled'" 
+                      class="icon-btn small danger" 
+                      title="Cancel"
+                      (click)="cancelNotification(notification.id)">
+                <app-x-icon [size]="14"></app-x-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Templates Tab -->
+  <div *ngIf="selectedTab() === 'templates'" class="tab-content">
+    <div class="templates-header">
+      <h3>Notification Templates</h3>
+      <button class="modern-btn secondary" (click)="showTemplateModal.set(true)">
+        <app-filter-icon [size]="16"></app-filter-icon>
+        Create Template
+      </button>
+    </div>
+
+    <div class="templates-grid">
+      <div class="template-card" *ngFor="let template of filteredTemplates()">
+        <div class="template-header">
+          <div class="template-icon">
+            <app-bell-icon [size]="20"></app-bell-icon>
+          </div>
+          <div class="template-actions">
+            <button class="icon-btn small" (click)="useTemplate(template)" title="Use Template">
+              <app-edit-icon [size]="14"></app-edit-icon>
+            </button>
+            <button class="icon-btn small danger" (click)="deleteTemplate(template.id)" title="Delete">
+              <app-delete-icon [size]="14"></app-delete-icon>
+            </button>
+          </div>
+        </div>
+        <div class="template-content">
+          <h4>{{ template.name }}</h4>
+          <p class="template-description">{{ template.description }}</p>
+          <div class="template-meta">
+            <span class="meta-badge">{{ template.type.replace('_', ' ') | titlecase }}</span>
+            <span class="meta-badge">Used {{ template.usageCount }} times</span>
+          </div>
+          <div class="template-variables">
+            <strong>Variables:</strong>
+            <span *ngFor="let variable of template.variables" class="variable-badge">
+              {{ variable }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics Tab -->
+  <div *ngIf="selectedTab() === 'stats'" class="tab-content">
+    <div class="stats-grid">
+      <div class="stat-tile">
+        <div class="stat-icon">
+          <app-bell-icon [size]="24"></app-bell-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ deliveryStats()?.totalSent || 0 }}</div>
+          <div class="stat-label">Total Sent</div>
+        </div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-icon"> 
+          <app-check-circle-icon [size]="24"></app-check-circle-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ getDeliveryRate() }}%</div>
+          <div class="stat-label">Delivery Rate</div>
+        </div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-icon">
+          <app-eye-icon [size]="24"></app-eye-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ getReadRate() }}%</div>
+          <div class="stat-label">Read Rate</div>
+        </div>
+      </div>
+      <div class="stat-tile">
+        <div class="stat-icon">
+          <app-x-icon [size]="24"></app-x-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ deliveryStats()?.totalFailed || 0 }}</div>
+          <div class="stat-label">Failed</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <h4>Notification Types Distribution</h4>
+        <div class="chart-container">
+          <!-- Placeholder for chart -->
+          <div class="chart-placeholder">
+            <div class="chart-bar" *ngFor="let type of deliveryStats()?.topNotificationTypes || []" 
+                 [style.height]="(type.count / 50) * 100 + '%'">
+              <span class="bar-label">{{ type.count }}</span>
+              <span class="bar-title">{{ type.type.replace('_', ' ') | titlecase }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h4>Channel Distribution</h4>
+        <div class="chart-container">
+          <!-- Placeholder for chart -->
+          <div class="chart-pie">
+            <div class="pie-segment" *ngFor="let channel of ['in_app', 'email', 'sms']; let i = index"
+                 [style.transform]="'rotate(' + (i * 120) + 'deg)'">
+              <span class="segment-label">{{ channel | titlecase }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- New Notification Modal -->
+<div class="modal-overlay" *ngIf="showNewNotificationModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Send New Notification</h3>
+      <button class="modal-close" (click)="showNewNotificationModal.set(false)">
+        <app-x-icon [size]="20"></app-x-icon>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form (ngSubmit)="sendNotification()" class="notification-form">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" [(ngModel)]="newNotification().title" name="title" required>
+        </div>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea [(ngModel)]="newNotification().message" name="message" rows="4" required></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Type</label>
+            <select [(ngModel)]="newNotification().type" name="type">
+              <option *ngFor="let type of notificationTypes" [value]="type">
+                {{ type.replace('_', ' ') | titlecase }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Recipient Type</label>
+            <select [(ngModel)]="newNotification().recipientType" name="recipientType">
+              <option *ngFor="let type of recipientTypes" [value]="type.value">
+                {{ type.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Class Selection (if recipient type is class) -->
+        <div *ngIf="newNotification().recipientType === 'class'" class="form-group">
+          <label>Select Classes</label>
+          <div class="class-selection">
+            <div *ngFor="let class of classes()" 
+                 class="class-option"
+                 [class.selected]="isClassSelected(class.id)"
+                 (click)="toggleClassSelection(class.id)">
+              <div class="class-info">
+                <strong>{{ class.name }}</strong>
+                <span>{{ class.currentStudentCount }} students</span>
+              </div>
+              <app-check-circle-icon [size]="16" *ngIf="isClassSelected(class.id)"></app-check-circle-icon>
+            </div>
+          </div>
+        </div>
+
+        <!-- Channels Selection -->
+        <div class="form-group">
+          <label>Channels</label>
+          <div class="channels-selection">
+            <div *ngFor="let channel of channelOptions" 
+                 class="channel-option"
+                 [class.selected]="newNotification().channels.includes(channel.value)"
+                 (click)="toggleChannel(channel.value)">
+              <div class="channel-icon">
+                <app-bell-icon [size]="16" *ngIf="channel.icon === 'bell'"></app-bell-icon>
+                <app-mail-icon [size]="16" *ngIf="channel.icon === 'mail'"></app-mail-icon>
+                <app-message-square-icon [size]="16" *ngIf="channel.icon === 'message-square'"></app-message-square-icon>
+              </div>
+              <span>{{ channel.label }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule Options -->
+        <div class="form-group">
+          <label>
+            <input type="checkbox" [(ngModel)]="newNotification().sendImmediately" name="sendImmediately">
+            Send Immediately
+          </label>
+          <div *ngIf="!newNotification().sendImmediately" class="schedule-options">
+            <label>Scheduled Time</label>
+            <input type="datetime-local" [(ngModel)]="newNotification().scheduledTime" name="scheduledTime">
+          </div>
+        </div>
+
+        <!-- Action URL (optional) -->
+        <div class="form-group">
+          <label>Action URL (optional)</label>
+          <input type="url" [(ngModel)]="newNotification().actionUrl" name="actionUrl" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>Action Text (optional)</label>
+          <input type="text" [(ngModel)]="newNotification().actionText" name="actionText" placeholder="Click here">
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="modern-btn secondary" (click)="showNewNotificationModal.set(false)">
+            Cancel
+          </button>
+          <button type="submit" class="modern-btn primary">
+            {{ newNotification().sendImmediately ? 'Send Now' : 'Schedule' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- New Template Modal -->
+<div class="modal-overlay" *ngIf="showTemplateModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Create Template</h3>
+      <button class="modal-close" (click)="showTemplateModal.set(false)">
+        <app-x-icon [size]="20"></app-x-icon>
+      </button>
+    </div>
+    <div class="modal-body">
+      <form (ngSubmit)="createTemplate()" class="template-form">
+        <div class="form-group">
+          <label>Template Name</label>
+          <input type="text" [(ngModel)]="newTemplate().name" name="name" required>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea [(ngModel)]="newTemplate().description" name="description" rows="2"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Type</label>
+            <select [(ngModel)]="newTemplate().type" name="type">
+              <option *ngFor="let type of notificationTypes" [value]="type">
+                {{ type.replace('_', ' ') | titlecase }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Default Channels</label>
+            <select [(ngModel)]="newTemplate().defaultChannels" name="defaultChannels" multiple>
+              <option *ngFor="let channel of channelOptions" [value]="channel.value">
+                {{ channel.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Subject Template</label>
+          <input type="text" [(ngModel)]="newTemplate().subjectTemplate" name="subjectTemplate" required>
+          <small>Use {{ '{{variable}}' }} for dynamic content</small>
+        </div>
+        <div class="form-group">
+          <label>Message Template</label>
+          <textarea [(ngModel)]="newTemplate().messageTemplate" name="messageTemplate" rows="4" required></textarea>
+          <small>Use {{ '{{variable}}' }} for dynamic content</small>
+        </div>
+        <div class="form-group">
+          <label>Variables (comma-separated)</label>
+          <input type="text" [(ngModel)]="newTemplate().variables" name="variables" placeholder="quizTitle, courseName, deadline">
+        </div>
+        <div class="form-actions">
+          <button type="button" class="modern-btn secondary" (click)="showTemplateModal.set(false)">
+            Cancel
+          </button>
+          <button type="submit" class="modern-btn primary">Create Template</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="loading-state" *ngIf="isLoading()">
+  <div class="loading-spinner"></div>
+  <p>Loading notifications...</p>
+</div>

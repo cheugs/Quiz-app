@@ -1,0 +1,1193 @@
+<!-- src/app/features/quiz-management/quiz-management.component.html -->
+<div class="quiz-management">
+  <!-- Header -->
+  <div class="modern-card header-card">
+    <div class="header-content">
+      <div class="header-left">
+        <h1>
+          <app-quiz-icon [size]="24" color="#2d2d2d"></app-quiz-icon>
+          Quiz Management
+        </h1>
+        <p class="header-subtitle">Create, edit, and manage evaluation quizzes</p>
+      </div>
+      <div class="header-right">
+        <button class="modern-btn primary-btn" (click)="openCreateModal()">
+          <app-plus-icon [size]="16"></app-plus-icon>
+          Create New Quiz
+        </button>
+        <button class="modern-btn secondary-btn" (click)="toggleFilters()">
+          <app-filter-icon [size]="16"></app-filter-icon>
+          Filters
+          <span class="filter-badge" *ngIf="hasActiveFilters()">
+            {{ selectedStatus().length + selectedEvaluationType().length + (selectedCourse() ? 1 : 0) }}
+          </span>
+        </button>
+        <button class="modern-btn icon-btn" (click)="refreshData()" [disabled]="isLoading()">
+          <app-refresh-icon [size]="16" [class.spinning]="isLoading()"></app-refresh-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-section">
+      <div class="search-box">
+        <app-search-icon [size]="18" color="#888"></app-search-icon>
+        <input 
+          type="text" 
+          placeholder="Search quizzes by title, code, or description..." 
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event)">
+        <div class="search-stats">
+          <span *ngIf="getFilteredCount() !== getTotalCount()">
+            {{ getFilteredCount() }} of {{ getTotalCount() }}
+          </span>
+          <span *ngIf="getFilteredCount() === getTotalCount()">
+            {{ getTotalCount() }} quizzes
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters Panel -->
+    <div class="filters-panel" *ngIf="showFilters()">
+      <div class="filters-header">
+        <h3>Filter Quizzes</h3>
+        <button class="clear-btn" (click)="clearFilters()" *ngIf="hasActiveFilters()">
+          Clear All
+        </button>
+      </div>
+      
+      <div class="filters-grid">
+        <!-- Status Filters -->
+        <div class="filter-group">
+          <label>Status</label>
+          <div class="filter-chips">
+            <button 
+              *ngFor="let status of statusOptions" 
+              class="filter-chip" 
+              [class.active]="selectedStatus().includes(status.value)"
+              [style.border-color]="status.color"
+              (click)="toggleStatus(status.value)">
+              <span class="chip-dot" [style.background]="status.color"></span>
+              {{ status.label }}
+              <app-check-icon 
+                [size]="12" 
+                *ngIf="selectedStatus().includes(status.value)"
+                color="white">
+              </app-check-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Course Filter -->
+        <div class="filter-group">
+          <label>Course</label>
+          <select 
+            class="modern-select" 
+            [ngModel]="selectedCourse()"
+            (ngModelChange)="selectedCourse.set($event)">
+            <option value="">All Courses</option>
+            <option *ngFor="let course of courses()" [value]="course.id">
+              {{ course.code }} - {{ course.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Evaluation Type Filters -->
+        <div class="filter-group">
+          <label>Evaluation Type</label>
+          <div class="filter-chips">
+            <button 
+              *ngFor="let type of evaluationTypeOptions" 
+              class="filter-chip" 
+              [class.active]="selectedEvaluationType().includes(type.value)"
+              [style.border-color]="type.color"
+              (click)="toggleEvaluationType(type.value)">
+              <span class="chip-dot" [style.background]="type.color"></span>
+              {{ type.label }}
+              <app-check-icon 
+                [size]="12" 
+                *ngIf="selectedEvaluationType().includes(type.value)"
+                color="white">
+              </app-check-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading() && quizzes().length === 0">
+    <div class="loading-spinner"></div>
+    <p>Loading quizzes...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!isLoading() && filteredQuizzes().length === 0">
+    <div class="empty-icon">
+      <app-quiz-icon [size]="48" color="#888"></app-quiz-icon>
+    </div>
+    <h3>No quizzes found</h3>
+    <p *ngIf="hasActiveFilters()">
+      Try adjusting your filters or 
+      <button class="text-btn" (click)="clearFilters()">clear all filters</button>
+    </p>
+    <p *ngIf="!hasActiveFilters()">
+      Get started by creating your first quiz
+    </p>
+    <button class="modern-btn primary-btn" (click)="openCreateModal()">
+      <app-plus-icon [size]="16"></app-plus-icon>
+      Create New Quiz
+    </button>
+  </div>
+
+  <!-- Quizzes Grid -->
+  <div class="quizzes-grid" *ngIf="!isLoading() && filteredQuizzes().length > 0">
+    <div class="quizzes-header">
+      <div class="quizzes-count">
+        <h3>Quizzes</h3>
+        <span class="count-badge">{{ getFilteredCount() }} quizzes</span>
+      </div>
+      <div class="quizzes-sort">
+        <select class="modern-select small">
+          <option>Newest First</option>
+          <option>Oldest First</option>
+          <option>Title A-Z</option>
+          <option>Title Z-A</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="quizzes-list">
+      <div class="quiz-card" *ngFor="let quiz of filteredQuizzes()">
+        <!-- Quiz Header -->
+        <div class="quiz-header">
+          <div class="quiz-icon">
+            <div class="icon-wrapper" [style.background]="getEvaluationTypeColor(quiz.evaluationType)">
+              <app-quiz-icon [size]="20" color="white"></app-quiz-icon>
+            </div>
+          </div>
+          <div class="quiz-title">
+            <h4>{{ quiz.title }}</h4>
+            <div class="quiz-meta">
+              <span class="quiz-code">{{ quiz.code }}</span>
+              <span class="quiz-dot">•</span>
+              <span class="quiz-course">{{ getCourseName(quiz.courseId) }}</span>
+              <span class="quiz-dot">•</span>
+              <span class="quiz-questions">
+                <app-list-icon [size]="12" color="#888"></app-list-icon>
+                {{ getQuizQuestionsCount(quiz) }} questions
+              </span>
+            </div>
+          </div>
+          <div class="quiz-actions">
+            <button class="action-btn" [title]="quiz.status === 'draft' ? 'Publish' : 'View'" (click)="quiz.status === 'draft' ? publishQuiz(quiz) : viewResponses(quiz)">
+              <app-eye-icon [size]="16"></app-eye-icon>
+            </button>
+            <button class="action-btn" (click)="viewQuizQuestions(quiz)" title="View Questions">
+              <app-list-icon [size]="16"></app-list-icon>
+            </button>
+            <button class="action-btn" (click)="modifyQuizQuestions(quiz)" title="Modify Questions">
+              <app-edit-icon [size]="16"></app-edit-icon>
+            </button>
+            <div class="dropdown">
+              <button class="action-btn more-btn">
+                <app-more-icon [size]="16"></app-more-icon>
+              </button>
+              <div class="dropdown-menu">
+                <button class="dropdown-item" (click)="duplicateQuiz(quiz)">
+                  <app-copy-icon [size]="14"></app-copy-icon>
+                  Duplicate
+                </button>
+                <button class="dropdown-item" (click)="viewResponses(quiz)">
+                  <app-bar-chart-icon [size]="14"></app-bar-chart-icon>
+                  View Responses
+                </button>
+                <button class="dropdown-item" (click)="viewQuizQuestions(quiz)">
+                  <app-list-icon [size]="14"></app-list-icon>
+                  View Questions
+                </button>
+                <button class="dropdown-item" (click)="modifyQuizQuestions(quiz)">
+                  <app-edit-icon [size]="14"></app-edit-icon>
+                  Modify Questions
+                </button>
+                <button class="dropdown-item" (click)="exportQuizData(quiz)">
+                  <app-download-icon [size]="14"></app-download-icon>
+                  Export Data
+                </button>
+                <div class="dropdown-divider"></div>
+                <button class="dropdown-item delete" (click)="deleteQuiz(quiz)">
+                  <app-delete-icon [size]="14"></app-delete-icon>
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quiz Content -->
+        <div class="quiz-content">
+          <p class="quiz-description">{{ quiz.description }}</p>
+          
+          <div class="quiz-stats">
+            <div class="stat-item">
+              <div class="stat-icon">
+                <app-clock-icon [size]="14" color="#888"></app-clock-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Duration</div>
+                <div class="stat-value">{{ quiz.duration }} min</div>
+              </div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-icon">
+                <app-list-icon [size]="14" color="#888"></app-list-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Questions</div>
+                <div class="stat-value">{{ quiz.totalQuestions }}</div>
+              </div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-icon">
+                <app-award-icon [size]="14" color="#888"></app-award-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Total Points</div>
+                <div class="stat-value">{{ quiz.totalPoints }}</div>
+              </div>
+            </div>
+            
+            <div class="stat-item">
+              <div class="stat-icon">
+                <app-users-icon [size]="14" color="#888"></app-users-icon>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Attempts</div>
+                <div class="stat-value">{{ formatNumber(quiz.totalAttempts) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quiz Footer -->
+        <div class="quiz-footer">
+          <div class="quiz-badges">
+            <span class="status-badge" [style.background]="getStatusColor(quiz.status)">
+              {{ quiz.status }}
+            </span>
+            <span class="type-badge" [style.background]="getEvaluationTypeColor(quiz.evaluationType)">
+              {{ quiz.evaluationType.replace('_', ' ') }}
+            </span>
+          </div>
+          
+          <div class="quiz-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width]="quiz.participationRate + '%'"></div>
+            </div>
+            <span class="progress-text">{{ quiz.participationRate }}% participation</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="quick-stats" *ngIf="!isLoading() && filteredQuizzes().length > 0">
+    <div class="stats-card">
+      <div class="stat-item">
+        <div class="stat-icon">
+          <app-quiz-icon [size]="20" color="#6b8e7f"></app-quiz-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ filteredQuizzes().length }}</div>
+          <div class="stat-label">Total Quizzes</div>
+        </div>
+      </div>
+      
+      <div class="stat-item">
+        <div class="stat-icon">
+          <app-users-icon [size]="20" color="#4a5f52"></app-users-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">
+            {{ getTotalAttempts() | number }}
+          </div>
+          <div class="stat-label">Total Attempts</div>
+        </div>
+      </div>
+      
+      <div class="stat-item">
+        <div class="stat-icon">
+          <app-list-icon [size]="20" color="#2d2d2d"></app-list-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">
+            {{ getActiveQuizzesCount() }}
+          </div>
+          <div class="stat-label">Active Quizzes</div>
+        </div>
+      </div>
+      
+      <div class="stat-item">
+        <div class="stat-icon">
+          <app-trending-up-icon [size]="20" color="#10b981"></app-trending-up-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">
+            {{ getAverageScore() }}%
+          </div>
+          <div class="stat-label">Avg. Score</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Quiz Modal -->
+  <div class="modal-overlay" *ngIf="showCreateModal()" (click)="closeCreateModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2>
+            <app-quiz-icon [size]="24" color="#2d2d2d"></app-quiz-icon>
+            Create New Quiz
+          </h2>
+          <div class="modal-steps">
+            <div class="step-indicator" [class.active]="currentStep() === 1">1</div>
+            <div class="step-line"></div>
+            <div class="step-indicator" [class.active]="currentStep() === 2">2</div>
+            <div class="step-line"></div>
+            <div class="step-indicator" [class.active]="currentStep() === 3">3</div>
+            <div class="step-line"></div>
+            <div class="step-indicator" [class.active]="currentStep() === 4">4</div>
+            <div class="step-line"></div>
+            <div class="step-indicator" [class.active]="currentStep() === 5">5</div>
+          </div>
+        </div>
+        <button class="modal-close" (click)="closeCreateModal()">
+          <app-x-icon [size]="20"></app-x-icon>
+        </button>
+      </div>
+
+      <div class="modal-content">
+        <!-- Step 1: Basic Information -->
+        <div class="modal-step" *ngIf="currentStep() === 1">
+          <div class="step-header">
+            <div class="step-number">1</div>
+            <div class="step-info">
+              <h3>Basic Information</h3>
+              <p>Enter the basic details for your quiz</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group full-width">
+              <label for="quizTitle">
+                <app-book-icon [size]="16" color="#6b8e7f"></app-book-icon>
+                Quiz Title *
+              </label>
+              <input 
+                type="text" 
+                id="quizTitle" 
+                placeholder="Enter quiz title"
+                [ngModel]="newQuizTitle()"
+                (ngModelChange)="newQuizTitle.set($event)">
+              <small class="form-hint">A descriptive title helps students identify the quiz</small>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="quizDescription">
+                <app-file-text-icon [size]="16" color="#6b8e7f"></app-file-text-icon>
+                Description
+              </label>
+              <textarea 
+                id="quizDescription" 
+                rows="3" 
+                placeholder="Enter quiz description"
+                [ngModel]="newQuizDescription()"
+                (ngModelChange)="newQuizDescription.set($event)"></textarea>
+              <small class="form-hint">Optional description about the quiz content</small>
+            </div>
+
+            <div class="form-group">
+              <label for="quizCourse">
+                <app-school-icon [size]="16" color="#6b8e7f"></app-school-icon>
+                Course *
+              </label>
+              <select 
+                id="quizCourse"
+                [ngModel]="newQuizCourse()"
+                (ngModelChange)="newQuizCourse.set($event)">
+                <option value="">Select a course</option>
+                <option *ngFor="let course of courses()" [value]="course.id">
+                  {{ course.code }} - {{ course.name }}
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="quizType">
+                <app-tag-icon [size]="16" color="#6b8e7f"></app-tag-icon>
+                Evaluation Type
+              </label>
+              <select 
+                id="quizType"
+                [ngModel]="newQuizEvaluationType()"
+                (ngModelChange)="newQuizEvaluationType.set($event)">
+                <option *ngFor="let type of evaluationTypeOptions" [value]="type.value">
+                  {{ type.label }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: Timing & Access -->
+        <div class="modal-step" *ngIf="currentStep() === 2">
+          <div class="step-header">
+            <div class="step-number">2</div>
+            <div class="step-info">
+              <h3>Timing & Access</h3>
+              <p>Set quiz availability and duration</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="quizStartDate">
+                <app-calendar-icon [size]="16" color="#6b8e7f"></app-calendar-icon>
+                Start Date *
+              </label>
+              <input 
+                type="date" 
+                id="quizStartDate"
+                [ngModel]="newQuizStartDate()"
+                (ngModelChange)="newQuizStartDate.set($event)">
+            </div>
+
+            <div class="form-group">
+              <label for="quizEndDate">
+                <app-calendar-icon [size]="16" color="#6b8e7f"></app-calendar-icon>
+                End Date *
+              </label>
+              <input 
+                type="date" 
+                id="quizEndDate"
+                [ngModel]="newQuizEndDate()"
+                (ngModelChange)="newQuizEndDate.set($event)">
+            </div>
+
+            <div class="form-group">
+              <label for="quizDuration">
+                <app-timer-icon [size]="16" color="#6b8e7f"></app-timer-icon>
+                Duration (minutes)
+              </label>
+              <input 
+                type="number" 
+                id="quizDuration"
+                min="1"
+                max="300"
+                [ngModel]="newQuizDuration()"
+                (ngModelChange)="newQuizDuration.set($event)">
+            </div>
+
+            <div class="form-group">
+              <label for="quizMaxAttempts">
+                <app-repeat-icon [size]="16" color="#6b8e7f"></app-repeat-icon>
+                Max Attempts
+              </label>
+              <input 
+                type="number" 
+                id="quizMaxAttempts"
+                min="1"
+                max="10"
+                [ngModel]="newQuizMaxAttempts()"
+                (ngModelChange)="newQuizMaxAttempts.set($event)">
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4>Accessible Classes *</h4>
+            <div class="classes-selection">
+              <div class="classes-actions">
+                <button type="button" class="text-btn small" (click)="selectAllClasses()">
+                  <app-check-square-icon [size]="14"></app-check-square-icon>
+                  Select All
+                </button>
+                <button type="button" class="text-btn small" (click)="deselectAllClasses()">
+                  <app-square-icon [size]="14"></app-square-icon>
+                  Deselect All
+                </button>
+              </div>
+              <div class="classes-list">
+                <div class="class-item" *ngFor="let class of selectedClasses()">
+                  <label class="class-checkbox">
+                    <input 
+                      type="checkbox"
+                      [checked]="class.selected"
+                      (change)="toggleClassSelection(class.id)">
+                    <span class="checkbox-custom"></span>
+                    <span class="class-name">{{ class.name }}</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+            <small class="form-hint">Select which classes can access this quiz</small>
+          </div>
+        </div>
+
+        <!-- Step 3: Settings & Configuration -->
+        <div class="modal-step" *ngIf="currentStep() === 3">
+          <div class="step-header">
+            <div class="step-number">3</div>
+            <div class="step-info">
+              <h3>Settings & Configuration</h3>
+              <p>Configure quiz behavior and options</p>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="quizPassingScore">
+                <app-percent-icon [size]="16" color="#6b8e7f"></app-percent-icon>
+                Passing Score (%)
+              </label>
+              <input 
+                type="number" 
+                id="quizPassingScore"
+                min="0"
+                max="100"
+                [ngModel]="newQuizPassingScore()"
+                (ngModelChange)="newQuizPassingScore.set($event)">
+            </div>
+
+            <div class="form-group full-width">
+              <label for="quizInstructions">
+                <app-file-text-icon [size]="16" color="#6b8e7f"></app-file-text-icon>
+                Instructions
+              </label>
+              <textarea 
+                id="quizInstructions" 
+                rows="3" 
+                placeholder="Enter instructions for students"
+                [ngModel]="newQuizInstructions()"
+                (ngModelChange)="newQuizInstructions.set($event)"></textarea>
+            </div>
+          </div>
+
+          <div class="settings-grid">
+            <div class="setting-item">
+              <label class="setting-label">
+                <app-check-square-icon [size]="16" color="#6b8e7f"></app-check-square-icon>
+                Show Results
+              </label>
+              <div class="setting-control">
+                <label class="switch">
+                  <input 
+                    type="checkbox"
+                    [checked]="newQuizShowResults()"
+                    (change)="newQuizShowResults.set(!newQuizShowResults())">
+                  <span class="slider"></span>
+                </label>
+                <small>Show scores and correct answers after submission</small>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label class="setting-label">
+                <app-shuffle-icon [size]="16" color="#6b8e7f"></app-shuffle-icon>
+                Shuffle Questions
+              </label>
+              <div class="setting-control">
+                <label class="switch">
+                  <input 
+                    type="checkbox"
+                    [checked]="newQuizShuffleQuestions()"
+                    (change)="newQuizShuffleQuestions.set(!newQuizShuffleQuestions())">
+                  <span class="slider"></span>
+                </label>
+                <small>Randomize question order for each attempt</small>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label class="setting-label">
+                <app-shuffle-icon [size]="16" color="#6b8e7f"></app-shuffle-icon>
+                Shuffle Options
+              </label>
+              <div class="setting-control">
+                <label class="switch">
+                  <input 
+                    type="checkbox"
+                    [checked]="newQuizShuffleOptions()"
+                    (change)="newQuizShuffleOptions.set(!newQuizShuffleOptions())">
+                  <span class="slider"></span>
+                </label>
+                <small>Randomize answer options for multiple choice questions</small>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label class="setting-label">
+                <app-eye-icon [size]="16" color="#6b8e7f"></app-eye-icon>
+                Allow Review
+              </label>
+              <div class="setting-control">
+                <label class="switch">
+                  <input 
+                    type="checkbox"
+                    [checked]="newQuizAllowReview()"
+                    (change)="newQuizAllowReview.set(!newQuizAllowReview())">
+                  <span class="slider"></span>
+                </label>
+                <small>Allow students to review their answers after submission</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Question Selection -->
+        <div class="modal-step" *ngIf="currentStep() === 4">
+          <div class="step-header">
+            <div class="step-number">4</div>
+            <div class="step-info">
+              <h3>Select Questions</h3>
+              <p>Choose questions from the question bank for your quiz</p>
+            </div>
+          </div>
+
+          <div class="form-section" *ngIf="!newQuizCourse()">
+            <div class="alert alert-warning">
+              <app-info-icon [size]="16"></app-info-icon>
+              Please select a course in Step 1 to load available questions
+            </div>
+          </div>
+
+          <div class="question-selection" *ngIf="newQuizCourse()">
+            <!-- Selected Questions Summary -->
+            <div class="selected-questions-summary">
+              <div class="summary-header">
+                <h4>
+                  <app-check-circle-icon [size]="16" color="#10b981"></app-check-circle-icon>
+                  Selected Questions ({{ selectedQuestionsForQuiz().length }})
+                </h4>
+                <div class="summary-total">
+                  <span>Total Points:</span>
+                  <strong>{{ getSelectedQuestionsTotalPoints() }}</strong>
+                </div>
+              </div>
+              
+              <div class="selected-questions-list" *ngIf="selectedQuestionsForQuiz().length > 0">
+                <div class="selected-question-item" *ngFor="let question of selectedQuestionsForQuiz()">
+                  <div class="question-info">
+                    <div class="question-text">
+                      {{ question.text.length > 80 ? question.text.substring(0, 80) + '...' : question.text }}
+                    </div>
+                    <div class="question-meta">
+                      <span class="question-type">{{ getQuestionTypeLabel(question.type) }}</span>
+                      <span class="question-dot">•</span>
+                      <span class="question-points">{{ question.points }} pts</span>
+                      <span class="question-dot">•</span>
+                      <span class="question-difficulty" [style.color]="getDifficultyColor(question.difficulty)">
+                        {{ question.difficulty }}
+                      </span>
+                    </div>
+                  </div>
+                  <button class="remove-btn" (click)="removeSelectedQuestion(question.id)">
+                    <app-x-icon [size]="14"></app-x-icon>
+                  </button>
+                </div>
+              </div>
+              
+              <div class="no-selected" *ngIf="selectedQuestionsForQuiz().length === 0">
+                <p>No questions selected yet. Use the question bank below to add questions.</p>
+              </div>
+            </div>
+
+            <!-- Question Bank -->
+            <div class="question-bank">
+              <div class="question-bank-header">
+                <h4>
+                  <app-book-icon [size]="16" color="#6b8e7f"></app-book-icon>
+                  Question Bank
+                </h4>
+                <div class="question-filters">
+<div class="search-box small">
+  <app-search-icon [size]="14" color="#888"></app-search-icon>
+  <input 
+    type="text" 
+    placeholder="Search questions..."
+    [ngModel]="questionFilter().search"
+    (ngModelChange)="updateQuestionFilterSearch($event)">
+</div>
+
+<select 
+  class="modern-select small"
+  [ngModel]="questionFilter().type"
+  (ngModelChange)="updateQuestionFilterType($event)">
+  <option *ngFor="let type of questionTypeOptions" [value]="type.value">
+    {{ type.label }}
+  </option>
+</select>
+
+<select 
+  class="modern-select small"
+  [ngModel]="questionFilter().difficulty"
+  (ngModelChange)="updateQuestionFilterDifficulty($event)">
+  <option *ngFor="let diff of difficultyOptions" [value]="diff.value">
+    {{ diff.label }}
+  </option>
+</select>
+                </div>
+              </div>
+
+              <div class="question-bank-actions">
+                <button class="text-btn small" (click)="selectAllFilteredQuestions()">
+                  <app-check-square-icon [size]="14"></app-check-square-icon>
+                  Select All Filtered
+                </button>
+                <button class="text-btn small" (click)="deselectAllQuestions()">
+                  <app-square-icon [size]="14"></app-square-icon>
+                  Clear Selection
+                </button>
+              </div>
+
+              <div class="questions-list">
+                <div *ngIf="filteredQuestions().length === 0" class="no-questions">
+                  <p>No questions found matching your criteria.</p>
+                </div>
+                
+                <div class="question-item" *ngFor="let question of filteredQuestions()">
+                  <label class="question-checkbox">
+                    <input 
+                      type="checkbox"
+                      (change)="toggleQuestionSelection(question)">
+                    <span class="checkbox-custom"></span>
+                    <div class="question-content">
+                      <div class="question-text">
+                        {{ question.text.length > 100 ? question.text.substring(0, 100) + '...' : question.text }}
+                      </div>
+                      <div class="question-details">
+                        <span class="question-type">
+                          <app-type-icon [size]="12"></app-type-icon>
+                          {{ getQuestionTypeLabel(question.type) }}
+                        </span>
+                        <span class="question-points">
+                          <app-award-icon [size]="12"></app-award-icon>
+                          {{ question.points }} pts
+                        </span>
+                        <span class="question-difficulty" [style.color]="getDifficultyColor(question.difficulty)">
+                          <app-hash-icon [size]="12"></app-hash-icon>
+                          {{ question.difficulty }}
+                        </span>
+                        <span class="question-topic" *ngIf="question.topic">
+                          <app-tag-icon [size]="12"></app-tag-icon>
+                          {{ question.topic }}
+                        </span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Review & Create -->
+        <div class="modal-step" *ngIf="currentStep() === 5">
+          <div class="step-header">
+            <div class="step-number">5</div>
+            <div class="step-info">
+              <h3>Review & Create</h3>
+              <p>Review your quiz settings before creation</p>
+            </div>
+          </div>
+
+          <div class="review-summary">
+            <div class="review-section">
+              <h4>Basic Information</h4>
+              <div class="review-item">
+                <span class="review-label">Title:</span>
+                <span class="review-value">{{ newQuizTitle() || 'Not set' }}</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Course:</span>
+                <span class="review-value">{{ getCourseName(newQuizCourse()) || 'Not set' }}</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Evaluation Type:</span>
+                <span class="info-value">{{ selectedQuiz() ? selectedQuiz()!.totalQuestions : 0 }}</span>
+              </div>
+            </div>
+
+            <div class="review-section">
+              <h4>Timing & Access</h4>
+              <div class="review-item">
+                <span class="review-label">Start Date:</span>
+                <span class="review-value">{{ newQuizStartDate() || 'Not set' }}</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">End Date:</span>
+                <span class="review-value">{{ newQuizEndDate() || 'Not set' }}</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Duration:</span>
+                <span class="review-value">{{ newQuizDuration() }} minutes</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Accessible Classes:</span>
+                <span class="review-value">{{ getSelectedClassIds().length }} classes selected</span>
+              </div>
+            </div>
+
+            <div class="review-section">
+              <h4>Questions</h4>
+              <div class="review-item">
+                <span class="review-label">Total Questions:</span>
+                <span class="review-value">{{ selectedQuestionsForQuiz().length }}</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Total Points:</span>
+                <span class="review-value">{{ getSelectedQuestionsTotalPoints() }}</span>
+              </div>
+              <div class="question-types-summary">
+                <div *ngFor="let type of getQuestionTypesSummary()" class="question-type-summary">
+                  <span class="type-label">{{ type.type }}:</span>
+                  <span class="type-count">{{ type.count }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="review-section">
+              <h4>Settings</h4>
+              <div class="review-item">
+                <span class="review-label">Passing Score:</span>
+                <span class="review-value">{{ newQuizPassingScore() }}%</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Max Attempts:</span>
+                <span class="review-value">{{ newQuizMaxAttempts() }}</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Show Results:</span>
+                <span class="review-value">{{ newQuizShowResults() ? 'Yes' : 'No' }}</span>
+              </div>
+              <div class="review-item">
+                <span class="review-label">Shuffle Questions:</span>
+                <span class="review-value">{{ newQuizShuffleQuestions() ? 'Yes' : 'No' }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label>
+              <app-info-icon [size]="16" color="#6b8e7f"></app-info-icon>
+              Ready to create your quiz?
+            </label>
+            <p class="form-note">
+              Your quiz will be created as a draft. You'll be able to add questions, 
+              preview, and publish it from the quiz editor.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="step-progress">
+          Step {{ currentStep() }} of {{ totalSteps }}
+        </div>
+        <div class="modal-actions">
+          <button 
+            class="modern-btn secondary-btn" 
+            *ngIf="currentStep() > 1"
+            (click)="prevStep()"
+            [disabled]="isCreating()">
+            <app-chevron-left-icon [size]="16"></app-chevron-left-icon>
+            Previous
+          </button>
+          <button 
+            class="modern-btn secondary-btn" 
+            *ngIf="currentStep() < totalSteps"
+            (click)="nextStep()"
+            [disabled]="currentStep() === 4 && !newQuizCourse()">
+            Next
+            <app-chevron-right-icon [size]="16"></app-chevron-right-icon>
+          </button>
+          <button 
+            class="modern-btn primary-btn" 
+            *ngIf="currentStep() === totalSteps"
+            (click)="createQuiz()"
+            [disabled]="isCreating() || !isFormValid()">
+            <app-save-icon [size]="16" *ngIf="!isCreating()"></app-save-icon>
+            <app-refresh-icon [size]="16" class="spinning" *ngIf="isCreating()"></app-refresh-icon>
+            {{ isCreating() ? 'Creating...' : 'Create Quiz' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Questions Modal -->
+  <div class="modal-overlay" *ngIf="showViewQuestionsModal()" (click)="closeViewQuestionsModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2>
+            <app-list-icon [size]="24" color="#2d2d2d"></app-list-icon>
+            Quiz Questions: {{ selectedQuiz()?.title }}
+          </h2>
+        </div>
+        <button class="modal-close" (click)="closeViewQuestionsModal()">
+          <app-x-icon [size]="20"></app-x-icon>
+        </button>
+      </div>
+
+      <div class="modal-content">
+        <div class="questions-view">
+          <div class="quiz-info">
+            <div class="info-item">
+              <span class="info-label">Total Questions:</span>
+              <span class="info-value">{{ selectedQuiz()?.totalQuestions }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Total Points:</span>
+              <span class="info-value">{{ selectedQuiz()?.totalPoints }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Duration:</span>
+              <span class="info-value">{{ selectedQuiz()?.duration }} minutes</span>
+            </div>
+          </div>
+
+          <div class="questions-list">
+            <div *ngFor="let question of quizService.getQuizQuestions(selectedQuiz()?.id || ''); let i = index" 
+                 class="question-view-item">
+              <div class="question-header">
+                <div class="question-number">Q{{ i + 1 }}</div>
+                <div class="question-meta">
+                  <span class="question-type-badge" [style.background]="getQuestionTypeColor(question.type)">
+                    {{ getQuestionTypeLabel(question.type) }}
+                  </span>
+                  <span class="question-points">
+                    <app-award-icon [size]="12"></app-award-icon>
+                    {{ question.points }} pts
+                  </span>
+                  <span class="question-difficulty" [style.color]="getDifficultyColor(question.difficulty)">
+                    <app-hash-icon [size]="12"></app-hash-icon>
+                    {{ question.difficulty }}
+                  </span>
+                </div>
+              </div>
+              
+              <div class="question-text">
+                {{ question.text }}
+              </div>
+              
+              <div class="question-options" *ngIf="question.options && question.options.length > 0">
+                <div *ngFor="let option of question.options" class="option-item">
+                  <div class="option-checkbox" [class.correct]="option.isCorrect">
+                    <app-check-circle-icon [size]="14" *ngIf="option.isCorrect"></app-check-circle-icon>
+                    <app-circle-icon [size]="14" *ngIf="!option.isCorrect"></app-circle-icon>
+                  </div>
+                  <span class="option-text">{{ option.text }}</span>
+                </div>
+              </div>
+              
+              <div class="question-footer">
+                <div class="question-tags">
+                  <span *ngFor="let tag of question.tags" class="tag">
+                    <app-tag-icon [size]="10"></app-tag-icon>
+                    {{ tag }}
+                  </span>
+                </div>
+                <div class="question-topic" *ngIf="question.topic">
+                  Topic: {{ question.topic }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button class="modern-btn secondary-btn" (click)="closeViewQuestionsModal()">
+            Close
+          </button>
+          <button class="modern-btn primary-btn" (click)="modifyQuizQuestions(selectedQuiz()!)">
+            <app-edit-icon [size]="16"></app-edit-icon>
+            Modify Questions
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modify Questions Modal -->
+  <div class="modal-overlay" *ngIf="showModifyQuestionsModal()" (click)="closeModifyQuestionsModal()">
+    <div class="modal-container wide" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2>
+            <app-edit-icon [size]="24" color="#2d2d2d"></app-edit-icon>
+            Modify Questions: {{ selectedQuiz()?.title }}
+          </h2>
+        </div>
+        <button class="modal-close" (click)="closeModifyQuestionsModal()">
+          <app-x-icon [size]="20"></app-x-icon>
+        </button>
+      </div>
+
+      <div class="modal-content">
+        <!-- Same question selection interface as in create modal -->
+        <div class="question-selection">
+          <!-- Selected Questions Summary -->
+          <div class="selected-questions-summary">
+            <div class="summary-header">
+              <h4>
+                <app-check-circle-icon [size]="16" color="#10b981"></app-check-circle-icon>
+                Selected Questions ({{ selectedQuestionsForQuiz().length }})
+              </h4>
+              <div class="summary-total">
+                <span>Total Points:</span>
+                <strong>{{ getSelectedQuestionsTotalPoints() }}</strong>
+              </div>
+            </div>
+            
+            <div class="selected-questions-list" *ngIf="selectedQuestionsForQuiz().length > 0">
+              <div class="selected-question-item" *ngFor="let question of selectedQuestionsForQuiz()">
+                <div class="question-info">
+                  <div class="question-text">
+                    {{ question.text.length > 80 ? question.text.substring(0, 80) + '...' : question.text }}
+                  </div>
+                  <div class="question-meta">
+                    <span class="question-type">{{ getQuestionTypeLabel(question.type) }}</span>
+                    <span class="question-dot">•</span>
+                    <span class="question-points">{{ question.points }} pts</span>
+                    <span class="question-dot">•</span>
+                    <span class="question-difficulty" [style.color]="getDifficultyColor(question.difficulty)">
+                      {{ question.difficulty }}
+                    </span>
+                  </div>
+                </div>
+                <button class="remove-btn" (click)="removeSelectedQuestion(question.id)">
+                  <app-x-icon [size]="14"></app-x-icon>
+                </button>
+              </div>
+            </div>
+            
+            <div class="no-selected" *ngIf="selectedQuestionsForQuiz().length === 0">
+              <p>No questions selected. Use the question bank below to add questions.</p>
+            </div>
+          </div>
+
+          <!-- Question Bank -->
+          <div class="question-bank">
+            <div class="question-bank-header">
+              <h4>
+                <app-book-icon [size]="16" color="#6b8e7f"></app-book-icon>
+                Question Bank
+              </h4>
+              <div class="question-filters">
+                <div class="search-box small">
+  <app-search-icon [size]="14" color="#888"></app-search-icon>
+  <input 
+    type="text" 
+    placeholder="Search questions..."
+    [ngModel]="questionFilter().search"
+    (ngModelChange)="updateQuestionFilterSearch($event)">
+</div>
+
+<select 
+  class="modern-select small"
+  [ngModel]="questionFilter().type"
+  (ngModelChange)="updateQuestionFilterType($event)">
+  <option *ngFor="let type of questionTypeOptions" [value]="type.value">
+    {{ type.label }}
+  </option>
+</select>
+
+<select 
+  class="modern-select small"
+  [ngModel]="questionFilter().difficulty"
+  (ngModelChange)="updateQuestionFilterDifficulty($event)">
+  <option *ngFor="let diff of difficultyOptions" [value]="diff.value">
+    {{ diff.label }}
+  </option>
+</select>
+              </div>
+            </div>
+
+            <div class="question-bank-actions">
+              <button class="text-btn small" (click)="selectAllFilteredQuestions()">
+                <app-check-square-icon [size]="14"></app-check-square-icon>
+                Select All Filtered
+              </button>
+              <button class="text-btn small" (click)="deselectAllQuestions()">
+                <app-square-icon [size]="14"></app-square-icon>
+                Clear Selection
+              </button>
+            </div>
+
+            <div class="questions-list">
+              <div *ngIf="filteredQuestions().length === 0" class="no-questions">
+                <p>No questions found matching your criteria.</p>
+              </div>
+              
+              <div class="question-item" *ngFor="let question of filteredQuestions()">
+                <label class="question-checkbox">
+                  <input 
+  type="checkbox"
+  [checked]="isQuestionSelected(question.id)"
+  (change)="toggleQuestionSelection(question)">
+                  <span class="checkbox-custom"></span>
+                  <div class="question-content">
+                    <div class="question-text">
+                      {{ question.text.length > 100 ? question.text.substring(0, 100) + '...' : question.text }}
+                    </div>
+                    <div class="question-details">
+                      <span class="question-type">
+                        <app-type-icon [size]="12"></app-type-icon>
+                        {{ getQuestionTypeLabel(question.type) }}
+                      </span>
+                      <span class="question-points">
+                        <app-award-icon [size]="12"></app-award-icon>
+                        {{ question.points }} pts
+                      </span>
+                      <span class="question-difficulty" [style.color]="getDifficultyColor(question.difficulty)">
+                        <app-hash-icon [size]="12"></app-hash-icon>
+                        {{ question.difficulty }}
+                      </span>
+                      <span class="question-topic" *ngIf="question.topic">
+                        <app-tag-icon [size]="12"></app-tag-icon>
+                        {{ question.topic }}
+                      </span>
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button class="modern-btn secondary-btn" (click)="closeModifyQuestionsModal()">
+            Cancel
+          </button>
+          <button 
+            class="modern-btn primary-btn" 
+            (click)="updateQuizQuestions()"
+            [disabled]="isLoading()">
+            <app-save-icon [size]="16"></app-save-icon>
+            {{ isLoading() ? 'Saving...' : 'Save Changes' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

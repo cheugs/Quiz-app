@@ -1,12 +1,20 @@
-import { Component, signal } from '@angular/core';
+// src/app/app.ts or app.component.ts
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
-  templateUrl: './app.html',
-  styleUrl: './app.scss'
+  standalone: true,
+  imports: [
+    RouterOutlet,
+    CommonModule
+  ],
+  template: `
+    <router-outlet></router-outlet>
+  `,
+  styleUrls: ['./app.scss']
 })
-export class App {
-  protected readonly title = signal('equizz-admin-dashboard');
+export class AppComponent {
+  title = 'equizz-admin-dashboard';
 }

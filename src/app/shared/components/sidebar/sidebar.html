@@ -1,0 +1,87 @@
+<aside class="sidebar" [class.collapsed]="isCollapsed()">
+  <!-- Logo Section -->
+  <div class="logo-section">
+    <div class="logo" *ngIf="!isCollapsed()">
+      <div class="logo-icon"></div>
+      <span class="logo-text">EQuizz</span>
+      <span class="logo-subtitle">Admin</span>
+    </div>
+    <div class="logo-collapsed" *ngIf="isCollapsed()">
+      <div class="logo-icon"></div>
+    </div>
+    
+    <button class="toggle-btn" (click)="toggleSidebar()" [title]="isCollapsed() ? 'Expand sidebar' : 'Collapse sidebar'">
+      <app-icon [name]="isCollapsed() ? 'expand' : 'collapse'"></app-icon>
+    </button>
+  </div>
+
+  <!-- Navigation Menu -->
+  <nav class="nav-menu">
+    <div *ngIf="filteredMenuItems().length === 0" class="no-menu-items">
+      <div style="padding: 20px; text-align: center; color: #666;">
+        No menu items available
+      </div>
+    </div>
+    
+    <div *ngFor="let item of filteredMenuItems()" class="nav-section">
+      <a 
+        [routerLink]="item.route"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+        class="nav-item"
+        (click)="setActiveMenu(item.id)"
+        [title]="isCollapsed() ? item.title : ''"
+      >
+        <div class="nav-icon">
+          <app-icon [name]="item.icon"></app-icon>
+        </div>
+        <span class="nav-title" *ngIf="!isCollapsed()">{{ item.title }}</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Bottom Section -->
+  <div class="sidebar-bottom">
+    <!-- Settings -->
+    <a 
+      routerLink="/settings" 
+      class="nav-item bottom-item"
+      [title]="isCollapsed() ? 'Settings' : ''"
+      routerLinkActive="active"
+    >
+      <div class="nav-icon">
+        <app-icon name="settings"></app-icon>
+      </div>
+      <span class="nav-title" *ngIf="!isCollapsed()">Settings</span>
+    </a>
+
+    <!-- Logout -->
+    <button 
+      class="nav-item bottom-item logout-btn"
+      (click)="logout()"
+      [title]="isCollapsed() ? 'Logout' : ''"
+    >
+      <div class="nav-icon">
+        <app-icon name="logout"></app-icon>
+      </div>
+      <span class="nav-title" *ngIf="!isCollapsed()">Logout</span>
+    </button>
+
+    <!-- User Profile -->
+    <div class="user-profile" *ngIf="!isCollapsed() && currentUser()">
+      <div class="profile-avatar">
+        {{ getInitials() }}
+      </div>
+      <div class="profile-info">
+        <div class="profile-name">{{ currentUser()!.firstName }} {{ currentUser()!.lastName }}</div>
+        <div class="profile-role">{{ formatRole(currentUser()!.role) }}</div>
+      </div>
+    </div>
+    
+    <div class="user-profile-collapsed" *ngIf="isCollapsed() && currentUser()">
+      <div class="profile-avatar-collapsed" [title]="currentUser()!.firstName + ' ' + currentUser()!.lastName">
+        {{ getInitials() }}
+      </div>
+    </div>
+  </div>
+</aside>

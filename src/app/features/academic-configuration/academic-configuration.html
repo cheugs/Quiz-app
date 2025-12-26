@@ -1,0 +1,681 @@
+<!-- src/app/features/academic-configuration/academic-configuration.component.html -->
+<div class="academic-configuration" *ngIf="!isLoading()">
+  
+  <!-- Header -->
+  <div class="config-header">
+    <div class="header-main">
+      <h1>Academic Configuration</h1>
+      <p>Manage academic years, semesters, evaluation types, and classes</p>
+    </div>
+    <div class="header-stats">
+      <div class="stat-card">
+        <div class="stat-value">{{ academicYears().length }}</div>
+        <div class="stat-label">Academic Years</div>
+        <div class="stat-graph">
+          <div class="graph-line">
+            <svg width="100%" height="40" viewBox="0 0 200 40">
+              <path d="M0 30 C40 25, 60 20, 100 18 S160 15, 200 12" 
+                    fill="none" 
+                    stroke="url(#stats-gradient-1)" 
+                    stroke-width="3" 
+                    stroke-linecap="round"/>
+              <defs>
+                <linearGradient id="stats-gradient-1" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#4a5f52" stop-opacity="0.8"/>
+                  <stop offset="100%" stop-color="#6b8e7f" stop-opacity="0.8"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ semesters().length }}</div>
+        <div class="stat-label">Semesters</div>
+        <div class="stat-graph">
+          <div class="graph-dots">
+            <div class="dot" *ngFor="let i of [0,1,2,3,4,5]" [style.animation-delay]="i*0.1+'s'"></div>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ evaluationTypes().length }}</div>
+        <div class="stat-label">Evaluation Types</div>
+        <div class="stat-graph">
+          <div class="spark-bars">
+            <div class="spark-bar" *ngFor="let i of [0,1,2,3,4]" 
+                 [style.height]="30 + i*15 + '%'"
+                 [style.animation-delay]="i*0.15+'s'"></div>
+          </div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ classes().length }}</div>
+        <div class="stat-label">Classes</div>
+        <div class="stat-graph">
+          <div class="health-wave">
+            <svg width="100%" height="60" viewBox="0 0 200 60">
+              <path d="M0 45 
+                       C20 40, 40 35, 60 30 
+                       C80 25, 120 20, 140 25 
+                       C160 30, 180 35, 200 40" 
+                    fill="none" 
+                    stroke="rgba(107, 142, 127, 0.3)" 
+                    stroke-width="2"/>
+              <path d="M0 45 
+                       C20 40, 40 35, 60 30 
+                       C80 25, 120 20, 140 25 
+                       C160 30, 180 35, 200 40" 
+                    fill="none" 
+                    stroke="#6b8e7f" 
+                    stroke-width="2"
+                    stroke-dasharray="200"
+                    stroke-dashoffset="200"
+                    class="wave-path">
+                <animate attributeName="stroke-dashoffset" 
+                         from="200" 
+                         to="0" 
+                         dur="2s" 
+                         begin="0s" 
+                         repeatCount="indefinite"/>
+              </path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <div class="config-tabs">
+    <div class="tab-list">
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab() === 'academic-years'"
+        (click)="setActiveTab('academic-years')">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M5 3V17M15 3V17M3 5H17M3 15H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Academic Years
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab() === 'semesters'"
+        (click)="setActiveTab('semesters')">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M5 3V17M10 3V17M15 3V17M3 5H17M3 10H17M3 15H17" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        Semesters
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab() === 'evaluation-types'"
+        (click)="setActiveTab('evaluation-types')">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M15 5L10 10M10 10L15 15M10 10H3M17 3H13M17 7V3H13" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Evaluation Types
+      </button>
+      <button 
+        class="tab-btn" 
+        [class.active]="activeTab() === 'classes'"
+        (click)="setActiveTab('classes')">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <path d="M10 10C12.7614 10 15 7.76142 15 5C15 2.23858 12.7614 0 10 0C7.23858 0 5 2.23858 5 5C5 7.76142 7.23858 10 10 10ZM10 12C6.68629 12 4 14.6863 4 18C4 19.1046 4.89543 20 6 20H14C15.1046 20 16 19.1046 16 18C16 14.6863 13.3137 12 10 12Z" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Classes
+      </button>
+    </div>
+  </div>
+
+  <!-- Content Area -->
+  <div class="config-content">
+    
+    <!-- Academic Years Tab -->
+    <div class="tab-content" *ngIf="activeTab() === 'academic-years'">
+      
+      <!-- Add Academic Year Button -->
+      <div class="content-header">
+        <div class="header-main">
+          <h2>Academic Years</h2>
+          <div class="header-subtitle">Manage and configure academic years</div>
+        </div>
+        <button class="modern-btn add-btn" (click)="isAddingAcademicYear.set(true)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Add Academic Year
+        </button>
+      </div>
+
+      <!-- Add Academic Year Form -->
+      <div class="add-form" *ngIf="isAddingAcademicYear()">
+        <h3>Add New Academic Year</h3>
+        <form [formGroup]="academicYearForm" (ngSubmit)="addAcademicYear()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Year Name *</label>
+              <input type="text" formControlName="name" placeholder="e.g., 2024-2025">
+              <small class="hint">Format: YYYY-YYYY (e.g., 2024-2025)</small>
+            </div>
+            <div class="form-group">
+              <label>Start Date *</label>
+              <input type="date" formControlName="startDate">
+            </div>
+            <div class="form-group">
+              <label>End Date *</label>
+              <input type="date" formControlName="endDate">
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="isCurrent">
+                <span>Set as current academic year</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="modern-btn cancel-btn" (click)="isAddingAcademicYear.set(false)">Cancel</button>
+            <button type="submit" class="modern-btn submit-btn" [disabled]="academicYearForm.invalid">Add Year</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Academic Years List -->
+      <div class="years-list">
+        <div class="modern-card year-card" *ngFor="let year of academicYears()" 
+             [class.current]="year.isCurrent"
+             (click)="selectedAcademicYear.set(year)">
+          <div class="year-header">
+            <div class="year-main">
+              <h3>{{ year.name }}</h3>
+              <span class="year-code">{{ year.code }}</span>
+              <span class="year-status" [style.background]="getStatusColor(year.status)">
+                {{ year.status }}
+              </span>
+              <span class="current-badge" *ngIf="year.isCurrent">Current</span>
+            </div>
+            <div class="year-actions">
+              <button class="icon-btn" title="Edit">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M11.3333 2C11.5084 1.82491 11.7163 1.68602 11.9453 1.59083C12.1742 1.49565 12.4199 1.4458 12.6667 1.44384C12.9134 1.44189 13.1599 1.48786 13.3904 1.57928C13.6209 1.6707 13.8308 1.80571 14.0083 1.97667C14.1857 2.14762 14.3273 2.35119 14.4253 2.57595C14.5232 2.80071 14.5757 3.04236 14.5798 3.28727C14.584 3.53218 14.5398 3.77552 14.4494 4.00338C14.3591 4.23124 14.2243 4.43932 14.0524 4.616L7.05239 11.616L3.33333 12.6667L4.38396 8.9476L11.3333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button class="icon-btn" title="View Details">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M8 14C11.3137 14 14 11.3137 14 8C14 4.68629 11.3137 2 8 2C4.68629 2 2 4.68629 2 8C2 11.3137 4.68629 14 8 14Z" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M8 10C9.10457 10 10 9.10457 10 8C10 6.89543 9.10457 6 8 6C6.89543 6 6 6.89543 6 8C6 9.10457 6.89543 10 8 10Z" stroke="currentColor" stroke-width="1.5"/>
+                  <path d="M8 5.33333V6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                  <path d="M8 10V10.6667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="year-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width]="getAcademicYearProgress(year) + '%'"></div>
+            </div>
+            <div class="progress-text">
+              <span>{{ formatDate(year.startDate) }} - {{ formatDate(year.endDate) }}</span>
+              <span>{{ getAcademicYearProgress(year) | number:'1.0-0' }}% complete</span>
+            </div>
+          </div>
+          
+          <div class="year-stats">
+            <div class="modern-stat">
+              <div class="stat-icon-wrapper">
+                <div class="stat-icon">
+                  <svg width="20" height="20" viewBox="0 0 20 20">
+                    <circle cx="10" cy="10" r="8" fill="rgba(107, 142, 127, 0.1)" stroke="#6b8e7f" stroke-width="1.5"/>
+                    <text x="10" y="12" text-anchor="middle" font-size="8" fill="#6b8e7f" font-weight="bold">{{ year.totalStudents }}</text>
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Students</div>
+                <div class="stat-value">{{ year.totalStudents }}</div>
+              </div>
+            </div>
+            <div class="modern-stat">
+              <div class="stat-icon-wrapper">
+                <div class="stat-icon">
+                  <svg width="20" height="20" viewBox="0 0 20 20">
+                    <circle cx="10" cy="10" r="8" fill="rgba(74, 95, 82, 0.1)" stroke="#4a5f52" stroke-width="1.5"/>
+                    <text x="10" y="12" text-anchor="middle" font-size="8" fill="#4a5f52" font-weight="bold">{{ year.totalClasses }}</text>
+                  </svg>
+                </div>
+              </div>
+              <div class="stat-content">
+                <div class="stat-label">Classes</div>
+                <div class="stat-value">{{ year.totalClasses }}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="year-footer">
+            <button class="modern-btn action-btn set-current-btn" 
+                    *ngIf="!year.isCurrent"
+                    (click)="setCurrentAcademicYear(year)">
+              Set as Current
+            </button>
+            <div class="semester-count">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M5 3V17M10 3V17M15 3V17M3 5H17M3 10H17M3 15H17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              {{ year.semesterIds?.length || 0 }} semesters
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Semesters Tab -->
+    <div class="tab-content" *ngIf="activeTab() === 'semesters'">
+      
+      <!-- Add Semester Button -->
+      <div class="content-header">
+        <div class="header-main">
+          <h2>Semesters</h2>
+          <div class="header-subtitle">Manage academic semesters</div>
+        </div>
+        <button class="modern-btn add-btn" (click)="isAddingSemester.set(true)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Add Semester
+        </button>
+      </div>
+
+      <!-- Add Semester Form -->
+      <div class="add-form" *ngIf="isAddingSemester()">
+        <h3>Add New Semester</h3>
+        <form [formGroup]="semesterForm" (ngSubmit)="addSemester()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Semester Name *</label>
+              <input type="text" formControlName="name" placeholder="e.g., Fall Semester 2024">
+            </div>
+            <div class="form-group">
+              <label>Type *</label>
+              <select formControlName="type">
+                <option value="fall">Fall Semester</option>
+                <option value="spring">Spring Semester</option>
+                <option value="summer">Summer Semester</option>
+                <option value="winter">Winter Semester</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Start Date *</label>
+              <input type="date" formControlName="startDate">
+            </div>
+            <div class="form-group">
+              <label>End Date *</label>
+              <input type="date" formControlName="endDate">
+            </div>
+            <div class="form-group">
+              <label>Academic Year *</label>
+              <select formControlName="academicYearId">
+                <option *ngFor="let year of academicYears()" [value]="year.id">{{ year.name }}</option>
+              </select>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="isCurrent">
+                <span>Set as current semester</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="modern-btn cancel-btn" (click)="isAddingSemester.set(false)">Cancel</button>
+            <button type="submit" class="modern-btn submit-btn" [disabled]="semesterForm.invalid">Add Semester</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Semesters List -->
+      <div class="semesters-list">
+        <div class="modern-card semester-card" *ngFor="let semester of semesters()" 
+             [class.current]="semester.isCurrent"
+             (click)="selectedSemester.set(semester)">
+          <div class="semester-header">
+            <div class="semester-type" [style.background]="getSemesterTypeColor(semester.type)">
+              {{ semester.type }}
+            </div>
+            <div class="semester-actions">
+              <button class="icon-btn" title="Edit">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M11.3333 2C11.5084 1.82491 11.7163 1.68602 11.9453 1.59083C12.1742 1.49565 12.4199 1.4458 12.6667 1.44384C12.9134 1.44189 13.1599 1.48786 13.3904 1.57928C13.6209 1.6707 13.8308 1.80571 14.0083 1.97667C14.1857 2.14762 14.3273 2.35119 14.4253 2.57595C14.5232 2.80071 14.5757 3.04236 14.5798 3.28727C14.584 3.53218 14.5398 3.77552 14.4494 4.00338C14.3591 4.23124 14.2243 4.43932 14.0524 4.616L7.05239 11.616L3.33333 12.6667L4.38396 8.9476L11.3333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="semester-content">
+            <h3>{{ semester.name }}</h3>
+            <div class="semester-meta">
+              <span class="meta-modern-item">
+                <div class="meta-icon">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M11.6667 2.33333H2.33333C1.59695 2.33333 1 2.93029 1 3.66667V12.3333C1 13.0697 1.59695 13.6667 2.33333 13.6667H11.6667C12.403 13.6667 13 13.0697 13 12.3333V3.66667C13 2.93029 12.403 2.33333 11.6667 2.33333Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9.66663 1V3.66667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.33337 1V3.66667" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M1 6.33333H13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                {{ formatDate(semester.startDate) }} - {{ formatDate(semester.endDate) }}
+              </span>
+              <span class="meta-modern-item">
+                <div class="meta-icon">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M7 13C10.3137 13 13 10.3137 13 7C13 3.68629 10.3137 1 7 1C3.68629 1 1 3.68629 1 7C1 10.3137 3.68629 13 7 13Z" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M7 4V7H10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                Registration: {{ formatDate(semester.registrationStart) }}
+              </span>
+            </div>
+            
+            <div class="semester-stats">
+              <div class="stat-modern-bubble">
+                <div class="bubble-value">{{ semester.enrolledStudents }}</div>
+                <div class="bubble-label">Students</div>
+              </div>
+              <div class="stat-modern-bubble">
+                <div class="bubble-value">{{ semester.activeCourses }}</div>
+                <div class="bubble-label">Courses</div>
+              </div>
+              <div class="stat-modern-bubble">
+                <div class="bubble-value">{{ semester.completedQuizzes }}</div>
+                <div class="bubble-label">Quizzes</div>
+              </div>
+            </div>
+            
+            <div class="semester-evaluations" *ngIf="semester.evaluationPeriods?.length">
+              <div class="evaluation-period" *ngFor="let period of semester.evaluationPeriods">
+                <span class="period-type">{{ period.type === 'mid_term' ? 'Mid-Term' : 'Final' }}</span>
+                <span class="period-dates">{{ formatDate(period.startDate) }} - {{ formatDate(period.endDate) }}</span>
+                <span class="period-status" [class.active]="period.isActive">
+                  {{ period.isActive ? 'Active' : 'Upcoming' }}
+                </span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="semester-footer">
+            <span class="current-badge" *ngIf="semester.isCurrent">Current Semester</span>
+            <span class="status-badge" [style.background]="getStatusColor(semester.status)">
+              {{ semester.status }}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Evaluation Types Tab -->
+    <div class="tab-content" *ngIf="activeTab() === 'evaluation-types'">
+      
+      <!-- Add Evaluation Type Button -->
+      <div class="content-header">
+        <div class="header-main">
+          <h2>Evaluation Types</h2>
+          <div class="header-subtitle">Configure different types of evaluations</div>
+        </div>
+        <button class="modern-btn add-btn" (click)="isAddingEvaluationType.set(true)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Add Evaluation Type
+        </button>
+      </div>
+
+      <!-- Add Evaluation Type Form -->
+      <div class="add-form" *ngIf="isAddingEvaluationType()">
+        <h3>Add New Evaluation Type</h3>
+        <form [formGroup]="evaluationTypeForm" (ngSubmit)="addEvaluationType()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Name *</label>
+              <input type="text" formControlName="name" placeholder="e.g., Mid-Term Evaluation">
+            </div>
+            <div class="form-group">
+              <label>Code *</label>
+              <input type="text" formControlName="code" placeholder="e.g., MID_TERM">
+              <small class="hint">Uppercase letters and underscores only (e.g., FINAL_EXAM)</small>
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea formControlName="description" rows="2" placeholder="Description of this evaluation type"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Weight (%) *</label>
+              <input type="number" formControlName="weight" min="0" max="100">
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="isGraded">
+                <span>This evaluation is graded</span>
+              </label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="includeInTranscript">
+                <span>Include in student transcript</span>
+              </label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="requiresProctoring">
+                <span>Requires proctoring</span>
+              </label>
+            </div>
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="isDefault">
+                <span>Set as default evaluation type</span>
+              </label>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="modern-btn cancel-btn" (click)="isAddingEvaluationType.set(false)">Cancel</button>
+            <button type="submit" class="modern-btn submit-btn" [disabled]="evaluationTypeForm.invalid">Add Type</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Evaluation Types List -->
+      <div class="evaluation-types-list">
+        <div class="modern-card eval-type-card" *ngFor="let type of evaluationTypes()" (click)="selectedEvaluationType.set(type)">
+          <div class="eval-type-header">
+            <div class="type-icon" [style.background]="getEvaluationTypeColor(type.code)">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M15 5L10 10M10 10L15 15M10 10H3M17 3H13M17 7V3H13" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="type-main">
+              <h3>{{ type.name }}</h3>
+              <span class="type-code">{{ type.code }}</span>
+              <span class="default-badge" *ngIf="type.isDefault">Default</span>
+            </div>
+          </div>
+          
+          <p class="type-description">{{ type.description }}</p>
+          
+          <div class="type-specs">
+            <div class="spec-item">
+              <span class="spec-label">Weight:</span>
+              <span class="spec-value">{{ type.weight }}%</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Graded:</span>
+              <span class="spec-value">{{ type.isGraded ? 'Yes' : 'No' }}</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">In Transcript:</span>
+              <span class="spec-value">{{ type.includeInTranscript ? 'Yes' : 'No' }}</span>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Max Attempts:</span>
+              <span class="spec-value">{{ type.defaultMaxAttempts }}</span>
+            </div>
+          </div>
+          
+          <div class="type-requirements">
+            <div class="requirement-tag" *ngIf="type.requiresProctoring">Proctored</div>
+            <div class="requirement-tag" *ngIf="type.isGraded">Graded</div>
+            <div class="requirement-tag" *ngIf="type.includeInTranscript">Transcript</div>
+            <div class="requirement-tag">Flexible Format</div>
+          </div>
+          
+          <div class="type-footer">
+            <span class="status-dot" [class.active]="type.isActive"></span>
+            <span>{{ type.isActive ? 'Active' : 'Inactive' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Classes Tab -->
+    <div class="tab-content" *ngIf="activeTab() === 'classes'">
+      
+      <!-- Add Class Button -->
+      <div class="content-header">
+        <div class="header-main">
+          <h2>Classes</h2>
+          <div class="header-subtitle">Manage academic classes and groups</div>
+        </div>
+        <button class="modern-btn add-btn" (click)="isAddingClass.set(true)">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3V13M3 8H13" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Add Class
+        </button>
+      </div>
+
+      <!-- Add Class Form -->
+      <div class="add-form" *ngIf="isAddingClass()">
+        <h3>Add New Class</h3>
+        <form [formGroup]="classForm" (ngSubmit)="addClass()">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Class Name *</label>
+              <input type="text" formControlName="name" placeholder="e.g., L3 Informatique Groupe A">
+            </div>
+            <div class="form-group">
+              <label>Class Code *</label>
+              <input type="text" formControlName="code" placeholder="e.g., L3-INFO-A">
+            </div>
+            <div class="form-group">
+              <label>Level *</label>
+              <select formControlName="level">
+                <option value="L1">L1 (First Year)</option>
+                <option value="L2">L2 (Second Year)</option>
+                <option value="L3">L3 (Third Year)</option>
+                <option value="M1">M1 (Master 1)</option>
+                <option value="M2">M2 (Master 2)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Department *</label>
+              <input type="text" formControlName="department" placeholder="e.g., Computer Science">
+            </div>
+            <div class="form-group">
+              <label>Max Students *</label>
+              <input type="number" formControlName="maxStudents" min="1" max="100">
+            </div>
+            <div class="form-group">
+              <label>Academic Year *</label>
+              <select formControlName="academicYearId">
+                <option *ngFor="let year of academicYears()" [value]="year.id">{{ year.name }}</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="modern-btn cancel-btn" (click)="isAddingClass.set(false)">Cancel</button>
+            <button type="submit" class="modern-btn submit-btn" [disabled]="classForm.invalid">Add Class</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Classes List -->
+      <div class="classes-list">
+        <div class="modern-card class-card" *ngFor="let class of classes()" (click)="selectedClass.set(class)">
+          <div class="class-header">
+            <div class="class-level">
+              <span class="level-badge">{{ class.level }}</span>
+            </div>
+            <div class="class-actions">
+              <button class="icon-btn" title="Edit">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M11.3333 2C11.5084 1.82491 11.7163 1.68602 11.9453 1.59083C12.1742 1.49565 12.4199 1.4458 12.6667 1.44384C12.9134 1.44189 13.1599 1.48786 13.3904 1.57928C13.6209 1.6707 13.8308 1.80571 14.0083 1.97667C14.1857 2.14762 14.3273 2.35119 14.4253 2.57595C14.5232 2.80071 14.5757 3.04236 14.5798 3.28727C14.584 3.53218 14.5398 3.77552 14.4494 4.00338C14.3591 4.23124 14.2243 4.43932 14.0524 4.616L7.05239 11.616L3.33333 12.6667L4.38396 8.9476L11.3333 2Z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="class-content">
+            <h3>{{ class.name }}</h3>
+            <div class="class-meta">
+              <span class="meta-modern-item">
+                <div class="meta-icon">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M12.25 6.41667C12.25 9.89471 9.89471 12.25 6.41667 12.25C2.93862 12.25 0.583328 9.89471 0.583328 6.41667C0.583328 2.93862 2.93862 0.583328 6.41667 0.583328C9.89471 0.583328 12.25 2.93862 12.25 6.41667Z" stroke="currentColor" stroke-width="1.5"/>
+                    <path d="M4.08333 6.41667H6.41667V8.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8.75 8.75L10.5 10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                {{ class.code }}
+              </span>
+              <span class="meta-modern-item">
+                <div class="meta-icon">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M12.25 4.66667V11.0833C12.25 11.5538 11.8705 11.9333 11.4 11.9333H2.6C2.12953 11.9333 1.75 11.5538 1.75 11.0833V4.66667M12.25 4.66667V2.91667C12.25 2.44619 11.8705 2.06667 11.4 2.06667H2.6C2.12953 2.06667 1.75 2.44619 1.75 2.91667V4.66667M12.25 4.66667H1.75" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M9.33333 1V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4.66667 1V4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </div>
+                {{ class.department }}
+              </span>
+            </div>
+            
+            <div class="class-stats">
+              <div class="stat-modern-bubble">
+                <div class="bubble-value">{{ class.currentStudentCount }}</div>
+                <div class="bubble-label">Students</div>
+              </div>
+              <div class="stat-modern-bubble">
+                <div class="bubble-value">{{ class.averageQuizParticipation || 0 }}%</div>
+                <div class="bubble-label">Participation</div>
+              </div>
+              <div class="stat-modern-bubble">
+                <div class="bubble-value">{{ class.totalQuizzesTaken || 0 }}</div>
+                <div class="bubble-label">Quizzes</div>
+              </div>
+            </div>
+            
+            <div class="class-progress">
+              <div class="progress-info">
+                <span>Capacity</span>
+                <span>{{ (class.currentStudentCount / class.maxStudents * 100) | number:'1.0-0' }}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width]="(class.currentStudentCount / class.maxStudents * 100) + '%'"></div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="class-footer">
+            <span class="full-badge" *ngIf="class.isFull">Full</span>
+            <span class="status-dot" [class.active]="class.isActive"></span>
+            <span>{{ class.isActive ? 'Active' : 'Inactive' }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading State -->
+<div class="loading-state" *ngIf="isLoading()">
+  <div class="loading-spinner"></div>
+  <p>Loading academic configuration...</p>
+</div>

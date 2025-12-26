@@ -1,0 +1,1162 @@
+<div class="question-bank" *ngIf="!isLoading()">
+  
+  <!-- Header Section -->
+  <div class="qb-header">
+    <div class="header-left">
+      <h1>Question Bank</h1>
+      <p class="header-subtitle">Manage and organize quiz questions</p>
+    </div>
+    <div class="header-right">
+      <button class="btn-secondary" (click)="refreshData()">
+        <app-refresh-icon [size]="18"></app-refresh-icon>
+        Refresh
+      </button>
+      <button class="btn-secondary" (click)="openStatisticsModal()">
+        <app-info-icon [size]="18"></app-info-icon>
+        Statistics
+      </button>
+      <button class="btn-secondary" (click)="downloadTemplate()">
+        <app-download-icon [size]="18"></app-download-icon>
+        Template
+      </button>
+      <button class="btn-secondary" (click)="openExportModal()" [disabled]="isExporting()">
+        <app-upload-icon [size]="18"></app-upload-icon>
+        {{ isExporting() ? 'Exporting...' : 'Export' }}
+      </button>
+      <button class="btn-primary" (click)="openImportModal()">
+        <app-upload-icon [size]="18"></app-upload-icon>
+        Import
+      </button>
+      <button class="btn-accent" (click)="openCreateModal()">
+        <app-add-icon [size]="18"></app-add-icon>
+        New Question
+      </button>
+    </div>
+  </div>
+
+  <!-- Bulk Actions Bar -->
+  <div class="bulk-actions-bar" *ngIf="hasSelectedQuestions()">
+    <div class="bulk-info">
+      <app-check-circle-icon [size]="20" [color]="'#6b8e7f'"></app-check-circle-icon>
+      <span>{{ selectedQuestions().size }} question(s) selected</span>
+    </div>
+    <div class="bulk-buttons">
+      <button class="btn-outline" (click)="clearSelection()">
+        <app-x-icon [size]="16"></app-x-icon>
+        Clear
+      </button>
+      <button class="btn-danger" (click)="openBulkDeleteModal()">
+        <app-delete-icon [size]="16"></app-delete-icon>
+        Delete Selected
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="qb-stats-grid">
+    <div class="qb-stat-card">
+      <div class="stat-icon">
+        <app-quiz-icon [size]="24" [color]="'#6b8e7f'"></app-quiz-icon>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ totalQuestions() }}</div>
+        <div class="stat-label">Total Questions</div>
+      </div>
+    </div>
+    
+    <div class="qb-stat-card">
+      <div class="stat-icon">
+        <app-grid-icon [size]="24" [color]="'#4a5f52'"></app-grid-icon>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ courses().length }}</div>
+        <div class="stat-label">Courses</div>
+      </div>
+    </div>
+    
+    <div class="qb-stat-card">
+      <div class="stat-icon">
+        <app-users-icon [size]="24" [color]="'#3b82f6'"></app-users-icon>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getActiveQuestionsCount() }}</div>
+        <div class="stat-label">Active Questions</div>
+      </div>
+    </div>
+    
+    <div class="qb-stat-card">
+      <div class="stat-icon">
+        <app-calendar-icon [size]="24" [color]="'#f59e0b'"></app-calendar-icon>
+      </div>
+      <div class="stat-content">
+        <div class="stat-value">{{ getHardQuestionsCount() }}</div>
+        <div class="stat-label">Hard Questions</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Search and Filter Bar -->
+  <div class="search-filter-bar">
+    <div class="search-box">
+      <app-search-icon [size]="20" [color]="'#888'"></app-search-icon>
+      <input 
+        type="text" 
+        placeholder="Search questions by text, topic, or tags..." 
+        [(ngModel)]="searchTerm"
+        (keyup.enter)="onSearch()"
+      />
+      <button class="clear-search" (click)="clearSearch()" *ngIf="searchTerm()">
+        <app-x-icon [size]="16"></app-x-icon>
+      </button>
+    </div>
+    
+    <div class="filter-actions">
+      <button class="btn-outline" (click)="selectAllQuestions()" *ngIf="filteredQuestions().length > 0">
+        <app-check-icon [size]="16"></app-check-icon>
+        Select All
+      </button>
+      <button class="filter-toggle" (click)="toggleFilters()" [class.active]="showFilters()">
+        <app-filter-icon [size]="18"></app-filter-icon>
+        Filters
+        <app-chevron-down-icon [size]="16" *ngIf="!showFilters()"></app-chevron-down-icon>
+        <app-chevron-up-icon [size]="16" *ngIf="showFilters()"></app-chevron-up-icon>
+      </button>
+      
+      <button class="btn-outline" (click)="clearFilters()" *ngIf="hasActiveFilters()">
+        Clear Filters
+      </button>
+    </div>
+  </div>
+
+  <!-- Filter Panel -->
+  <div class="filter-panel" *ngIf="showFilters()">
+    <div class="filter-section">
+      <label>Course</label>
+      <div class="filter-options">
+        <label class="filter-option" *ngFor="let course of courses()">
+          <input 
+            type="checkbox" 
+            [value]="course.id"
+            [(ngModel)]="filterModel.courseIds"
+          />
+          {{ course.code }} - {{ course.name }}
+        </label>
+      </div>
+    </div>
+    
+    <div class="filter-section">
+      <label>Question Type</label>
+      <div class="filter-options">
+        <label class="filter-option" *ngFor="let type of getQuestionTypeEntries()">
+          <input 
+            type="checkbox" 
+            [value]="type.value"
+            [(ngModel)]="filterModel.questionTypes"
+          />
+          {{ getQuestionTypeDisplay(type.value) }}
+        </label>
+      </div>
+    </div>
+    
+    <div class="filter-section">
+      <label>Difficulty</label>
+      <div class="filter-options">
+        <label class="filter-option" *ngFor="let level of getDifficultyLevelEntries()">
+          <input 
+            type="checkbox" 
+            [value]="level.value"
+            [(ngModel)]="filterModel.difficultyLevels"
+          />
+          {{ getCapitalizedDifficulty(level.value) }}
+        </label>
+      </div>
+    </div>
+    
+    <div class="filter-section">
+      <label>Usage Status</label>
+      <div class="filter-options">
+        <label class="filter-option">
+          <input 
+            type="radio" 
+            name="usage" 
+            value="true"
+            [(ngModel)]="filterModel.usedInQuiz"
+          />
+          Used in Quizzes
+        </label>
+        <label class="filter-option">
+          <input 
+            type="radio" 
+            name="usage" 
+            value="false"
+            [(ngModel)]="filterModel.usedInQuiz"
+          />
+          Not Used
+        </label>
+        <label class="filter-option">
+          <input 
+            type="radio" 
+            name="usage" 
+            value=""
+            [(ngModel)]="filterModel.usedInQuiz"
+          />
+          All Questions
+        </label>
+      </div>
+    </div>
+    
+    <div class="filter-actions">
+      <button class="btn-outline" (click)="clearFilters()">Clear</button>
+      <button class="btn-primary" (click)="applyFilters()">Apply Filters</button>
+    </div>
+  </div>
+
+  <!-- Questions Grid -->
+  <div class="questions-grid" *ngIf="filteredQuestions().length > 0">
+    <div class="question-card" *ngFor="let question of filteredQuestions()">
+      <div class="question-header">
+        <div class="question-select">
+          <input 
+            type="checkbox" 
+            [checked]="selectedQuestions().has(question.id)"
+            (change)="toggleQuestionSelection(question.id)"
+          />
+        </div>
+        <div class="question-type" [style.background]="getQuestionTypeColor(question.type)">
+          {{ getQuestionTypeDisplay(question.type) }}
+        </div>
+        <div class="question-actions">
+          <button class="action-btn" (click)="previewQuestion(question)">
+            <app-eye-icon [size]="16"></app-eye-icon>
+          </button>
+          <button class="action-btn" (click)="openEditModal(question)">
+            <app-edit-icon [size]="16"></app-edit-icon>
+          </button>
+          <div class="dropdown">
+            <button class="action-btn">
+              <app-more-icon [size]="16"></app-more-icon>
+            </button>
+            <div class="dropdown-menu">
+              <button class="dropdown-item" (click)="duplicateQuestion(question)">
+                Duplicate
+              </button>
+              <button class="dropdown-item delete" (click)="confirmDelete(question)">
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="question-content">
+        <h3 class="question-text">{{ getTruncatedText(question.text) }}</h3>
+        
+        <div class="question-meta">
+          <span class="meta-item">
+            <app-quiz-icon [size]="14"></app-quiz-icon>
+            {{ getCourseName(question.courseId) }}
+          </span>
+          <span class="meta-item">
+            <app-clock-icon [size]="14"></app-clock-icon>
+            {{ formatDate(question.updatedAt) }}
+          </span>
+          <span class="meta-item">
+            <app-users-icon [size]="14"></app-users-icon>
+            {{ getUsageText(question) }}
+          </span>
+        </div>
+        
+        <div class="question-tags">
+          <span class="tag" *ngIf="question.topic">{{ question.topic }}</span>
+          <span class="tag difficulty" [style.background]="getDifficultyColor(question.difficulty)">
+            {{ question.difficulty }}
+          </span>
+          <span class="tag points">{{ question.points }} points</span>
+          <span class="tag" *ngFor="let tag of question.tags.slice(0, 2)">{{ tag }}</span>
+          <span class="tag more" *ngIf="question.tags.length > 2">+{{ question.tags.length - 2 }}</span>
+        </div>
+        
+        <div class="question-options" *ngIf="question.options">
+          <div class="options-preview">
+            <div class="option" *ngFor="let option of question.options">
+              <span class="option-letter">{{ getOptionLetter(option.order) }}</span>
+              <span class="option-text">{{ getTruncatedText(option.text, 50) }}</span>
+              <span class="option-correct" *ngIf="option.isCorrect">
+                <app-check-icon [size]="12"></app-check-icon>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="filteredQuestions().length === 0 && !isLoading()">
+    <div class="empty-icon">
+      <app-quiz-icon [size]="48" [color]="'#e5e5e5'"></app-quiz-icon>
+    </div>
+    <h3>No questions found</h3>
+    <p *ngIf="hasActiveFilters()">
+      Try adjusting your filters or <a (click)="clearFilters()">clear all filters</a>
+    </p>
+    <p *ngIf="!hasActiveFilters()">
+      Start by <a (click)="openCreateModal()" style="cursor: pointer; color: #6b8e7f; text-decoration: underline;">creating a new question</a> or <a (click)="openImportModal()" style="cursor: pointer; color: #6b8e7f; text-decoration: underline;">importing questions</a>
+    </p>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="totalPages() > 1">
+    <button class="pagination-btn" (click)="changePage(currentPage() - 1)" [disabled]="currentPage() === 1">
+      Previous
+    </button>
+    
+    <div class="pagination-pages">
+      <button 
+        class="pagination-page" 
+        *ngFor="let page of getPaginationRange()" 
+        [class.active]="page === currentPage()"
+        (click)="changePage(page)"
+      >
+        {{ page }}
+      </button>
+    </div>
+    
+    <button class="pagination-btn" (click)="changePage(currentPage() + 1)" [disabled]="currentPage() === totalPages()">
+      Next
+    </button>
+  </div>
+
+</div>
+
+<!-- Loading State -->
+<div class="loading-state" *ngIf="isLoading()">
+  <div class="loading-spinner"></div>
+  <p>Loading questions...</p>
+</div>
+
+<!-- Question Preview Modal -->
+<div class="modal-overlay" *ngIf="selectedQuestion() && !isDeleteModalOpen()">
+  <div class="modal-content preview-modal">
+    <div class="modal-header">
+      <h2>Question Preview</h2>
+      <button class="modal-close" (click)="closePreview()">
+        <app-x-icon [size]="20"></app-x-icon>
+      </button>
+    </div>
+    
+    <div class="modal-body" *ngIf="selectedQuestion()">
+      <div class="preview-header">
+        <div class="preview-type" [style.background]="getQuestionTypeColor(selectedQuestion()!.type)">
+          {{ getQuestionTypeDisplay(selectedQuestion()!.type) }}
+        </div>
+        <div class="preview-meta">
+          <span class="meta-item">
+            <app-quiz-icon [size]="14"></app-quiz-icon>
+            {{ getCourseName(selectedQuestion()!.courseId) }}
+          </span>
+          <span class="meta-item">
+            <span class="difficulty-badge" [style.background]="getDifficultyColor(selectedQuestion()!.difficulty)">
+              {{ selectedQuestion()!.difficulty }}
+            </span>
+          </span>
+          <span class="meta-item">
+            {{ selectedQuestion()!.points }} points
+          </span>
+        </div>
+      </div>
+      
+      <div class="preview-question">
+        <h3>{{ selectedQuestion()!.text }}</h3>
+        
+        <div *ngIf="selectedQuestion()!.options">
+          <div class="preview-options">
+            <div class="preview-option" *ngFor="let option of selectedQuestion()!.options">
+              <div class="option-header">
+                <span class="option-letter">{{ getOptionLetter(option.order) }}</span>
+                <span class="option-correct-badge" *ngIf="option.isCorrect">
+                  <app-check-icon [size]="12"></app-check-icon>
+                  Correct
+                </span>
+              </div>
+              <p class="option-text">{{ option.text }}</p>
+              <p class="option-explanation" *ngIf="option.explanation">
+                <strong>Explanation:</strong> {{ option.explanation }}
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="selectedQuestion()!.correctAnswer">
+          <div class="preview-answer">
+            <strong>Correct Answer:</strong>
+            <p>{{ selectedQuestion()!.correctAnswer }}</p>
+          </div>
+        </div>
+        
+        <div *ngIf="selectedQuestion()!.explanation">
+          <div class="preview-explanation">
+            <strong>Explanation:</strong>
+            <p>{{ selectedQuestion()!.explanation }}</p>
+          </div>
+        </div>
+        
+        <div class="preview-footer">
+          <div class="preview-tags">
+            <span class="tag" *ngFor="let tag of selectedQuestion()!.tags">{{ tag }}</span>
+          </div>
+          <div class="preview-stats">
+            <span>Version {{ selectedQuestion()!.version }}</span>
+            <span>Created {{ formatDate(selectedQuestion()!.createdAt) }}</span>
+            <span>Last used {{ getLastUsedText(selectedQuestion()!) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="closePreview()">Close</button>
+      <button class="btn-primary" (click)="openEditModal(selectedQuestion()!)">
+        <app-edit-icon [size]="16"></app-edit-icon>
+        Edit Question
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" *ngIf="isDeleteModalOpen()">
+  <div class="modal-content delete-modal">
+    <div class="modal-header">
+      <h2>Delete Question</h2>
+      <button class="modal-close" (click)="isDeleteModalOpen.set(false)">
+        <app-x-icon [size]="20"></app-x-icon>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="warning-icon">
+        <app-alert-circle-icon [size]="48" [color]="'#ef4444'"></app-alert-circle-icon>
+      </div>
+      <h3>Are you sure?</h3>
+      <p *ngIf="selectedQuestion() && isQuestionUsed(selectedQuestion()!)">
+        This question is used in {{ selectedQuestion()!.usageCount }} quiz(es). 
+        Deleting it may affect existing quizzes.
+      </p>
+      <p *ngIf="selectedQuestion() && !isQuestionUsed(selectedQuestion()!)">
+        This will permanently delete the question.
+      </p>
+      <div class="question-preview" *ngIf="selectedQuestion()">
+        <strong>{{ getTruncatedText(selectedQuestion()!.text, 80) }}</strong>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="isDeleteModalOpen.set(false)">Cancel</button>
+      <button class="btn-danger" (click)="deleteQuestion()">
+        <app-delete-icon [size]="16"></app-delete-icon>
+        Delete Question
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Delete Modal -->
+<div class="modal-overlay" *ngIf="isBulkDeleteModalOpen()">
+  <div class="modal-content delete-modal">
+    <div class="modal-header">
+      <h2>Delete Selected Questions</h2>
+      <button class="modal-close" (click)="isBulkDeleteModalOpen.set(false)">
+        <app-x-icon [size]="20"></app-x-icon>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="warning-icon">
+        <app-alert-circle-icon [size]="48" [color]="'#ef4444'"></app-alert-circle-icon>
+      </div>
+      <h3>Delete {{ selectedQuestions().size }} Question(s)?</h3>
+      <p>This action cannot be undone. The selected questions will be permanently deleted.</p>
+      
+      <div class="affected-info" *ngIf="hasSelectedQuestions()">
+        <app-info-icon [size]="16" [color]="'#f59e0b'"></app-info-icon>
+        <span>Some questions may be used in active quizzes.</span>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="isBulkDeleteModalOpen.set(false)">Cancel</button>
+      <button class="btn-danger" (click)="deleteSelectedQuestions()">
+        <app-delete-icon [size]="16"></app-delete-icon>
+        Delete {{ selectedQuestions().size }} Question(s)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Import Modal -->
+<div class="modal-overlay" *ngIf="isImportModalOpen()">
+  <div class="modal-content import-modal">
+    <div class="modal-header">
+      <h2>Import Questions</h2>
+      <button class="modal-close" (click)="isImportModalOpen.set(false)">
+        <app-x-icon [size]="20"></app-x-icon>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="import-instructions">
+        <h3>Instructions</h3>
+        <ul>
+          <li>Download the template file to ensure correct formatting</li>
+          <li>Fill in your questions following the template structure</li>
+          <li>Supported file formats: .xlsx, .xls, .csv</li>
+          <li>Maximum file size: 10MB</li>
+          <li>Questions will be validated before import</li>
+        </ul>
+      </div>
+      
+      <div class="file-upload-area" [class.has-file]="importFile()">
+        <input 
+          type="file" 
+          #importFileInput
+          (change)="onFileSelected($event)"
+          accept=".xlsx,.xls,.csv"
+          hidden
+        />
+        
+        <div class="upload-icon">
+          <app-upload-icon [size]="48" [color]="importFile() ? '#6b8e7f' : '#e5e5e5'"></app-upload-icon>
+        </div>
+        
+        <div class="upload-text" *ngIf="!importFile()">
+          <p>Drag & drop your file here or</p>
+          <button class="btn-outline" (click)="importFileInput.click()">Browse Files</button>
+          <p class="file-types">Supported: .xlsx, .xls, .csv</p>
+        </div>
+        
+        <div class="file-selected" *ngIf="importFile()">
+          <div class="file-info">
+            <app-file-text-icon [size]="24"></app-file-text-icon>
+            <div>
+              <strong>{{ importFile()!.name }}</strong>
+              <p>{{ (importFile()!.size / 1024).toFixed(1) }} KB</p>
+            </div>
+          </div>
+          <button class="btn-outline" (click)="importFile.set(null)">Remove</button>
+        </div>
+      </div>
+      
+      <div class="import-progress" *ngIf="importProgress() > 0">
+        <div class="progress-header">
+          <span>Importing questions...</span>
+          <span>{{ importProgress() }}%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" [style.width]="importProgress() + '%'"></div>
+        </div>
+        <div class="progress-steps">
+          <span *ngIf="importProgress() < 30">Validating file...</span>
+          <span *ngIf="importProgress() >= 30 && importProgress() < 70">Processing questions...</span>
+          <span *ngIf="importProgress() >= 70 && importProgress() < 100">Saving to database...</span>
+          <span *ngIf="importProgress() === 100">Import complete!</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="isImportModalOpen.set(false)">Cancel</button>
+      <button class="btn-secondary" (click)="downloadTemplate()">
+        <app-download-icon [size]="16"></app-download-icon>
+        Download Template
+      </button>
+      <button class="btn-primary" (click)="importQuestions()" [disabled]="!importFile() || importProgress() > 0">
+        <app-upload-icon [size]="16"></app-upload-icon>
+        {{ importProgress() > 0 ? 'Importing...' : 'Import Questions' }}
+      </button>
+    </div>
+  </div>
+</div>
+ 
+<!-- Export Modal -->
+<div class="modal-overlay" *ngIf="isExportModalOpen()">
+  <div class="modal-content export-modal">
+    <div class="modal-header">
+      <h2>Export Questions</h2>
+      <button class="modal-close" (click)="isExportModalOpen.set(false)">
+        <app-x-icon [size]="20"></app-x-icon>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="export-options">
+        <div class="option-section">
+          <h3>Export Format</h3>
+          <div class="format-options">
+            <label class="format-option" [class.active]="exportFormat() === 'excel'">
+              <input 
+                type="radio" 
+                name="format" 
+                value="excel"
+                [(ngModel)]="exportFormat"
+              />
+              <div class="format-icon">
+                <app-file-text-icon [size]="24" [color]="'#10b981'"></app-file-text-icon>
+              </div>
+              <div class="format-info">
+                <strong>Excel (.xlsx)</strong>
+                <p>Best for editing and analysis</p>
+              </div>
+            </label>
+            
+            <label class="format-option" [class.active]="exportFormat() === 'csv'">
+              <input 
+                type="radio" 
+                name="format" 
+                value="csv"
+                [(ngModel)]="exportFormat"
+              />
+              <div class="format-icon">
+                <app-file-text-icon [size]="24" [color]="'#3b82f6'"></app-file-text-icon>
+              </div>
+              <div class="format-info">
+                <strong>CSV (.csv)</strong>
+                <p>Compatible with most applications</p>
+              </div>
+            </label>
+          </div>
+        </div>
+        
+        <div class="option-section">
+          <h3>Export Scope</h3>
+          <div class="scope-options">
+            <label class="scope-option">
+              <input type="radio" name="scope" value="all" checked />
+              <div class="scope-info">
+                <strong>All Questions</strong>
+                <p>{{ totalQuestions() }} questions with current filters</p>
+              </div>
+            </label>
+            
+            <label class="scope-option" *ngIf="hasSelectedQuestions()">
+              <input type="radio" name="scope" value="selected" />
+              <div class="scope-info">
+                <strong>Selected Questions Only</strong>
+                <p>{{ selectedQuestions().size }} questions selected</p>
+              </div>
+            </label>
+          </div>
+        </div>
+        
+        <div class="export-preview">
+          <h3>Export Preview</h3>
+          <div class="preview-info">
+            <p><strong>Total Questions:</strong> {{ totalQuestions() }}</p>
+            <p><strong>Format:</strong> {{ exportFormat().toUpperCase() }}</p>
+            <p><strong>Includes:</strong> Question text, options, correct answers, metadata</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-outline" (click)="isExportModalOpen.set(false)">Cancel</button>
+      <button class="btn-primary" (click)="exportQuestions()" [disabled]="isExporting()">
+        <app-download-icon [size]="16"></app-download-icon>
+        {{ isExporting() ? 'Exporting...' : 'Export Questions' }}
+      </button>
+    </div>
+  </div>
+</div>
+ 
+<!-- Statistics Modal -->
+<div class="modal-overlay" *ngIf="isStatisticsModalOpen()">
+  <div class="modal-content statistics-modal">
+    <div class="modal-header">
+      <h2>Question Bank Statistics</h2>
+      <button class="modal-close" (click)="isStatisticsModalOpen.set(false)">
+        <app-x-icon [size]="20"></app-x-icon>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="stats-summary">
+        <div class="stat-card">
+          <div class="stat-value">{{ statistics().totalQuestions }}</div>
+          <div class="stat-label">Total Questions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ getActiveQuestionsCount() }}</div>
+          <div class="stat-label">Active Questions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ statistics().unusedQuestions }}</div>
+          <div class="stat-label">Unused Questions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">{{ statistics().mostUsedQuestion.usageCount }}</div>
+          <div class="stat-label">Most Used</div>
+        </div>
+      </div>
+      
+      <div class="stats-details">
+        <div class="stats-section">
+          <h3>Distribution by Question Type</h3>
+          <div class="type-distribution">
+            <div class="type-item" *ngFor="let item of statistics().byType">
+              <div class="type-header">
+                <span class="type-name">{{ item.type }}</span>
+                <span class="type-count">{{ item.count }} ({{ item.percentage.toFixed(1) }}%)</span>
+              </div>
+              <div class="type-bar">
+                <div class="type-bar-fill" [style.width]="item.percentage + '%'"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="stats-section">
+          <h3>Distribution by Difficulty</h3>
+          <div class="difficulty-distribution">
+            <div class="difficulty-item" *ngFor="let item of statistics().byDifficulty">
+              <div class="difficulty-header">
+                <span class="difficulty-name">{{ item.difficulty }}</span>
+                <span class="difficulty-count">{{ item.count }} ({{ item.percentage.toFixed(1) }}%)</span>
+              </div>
+              <div class="difficulty-bar">
+                <div 
+                  class="difficulty-bar-fill" 
+                  [style.width]="item.percentage + '%'"
+                  [style.background]="getDifficultyColor(getDifficultyFromString(item.difficulty))"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="stats-section">
+          <h3>Most Used Question</h3>
+          <div class="most-used">
+            <div class="most-used-info">
+              <p><strong>Question:</strong> {{ statistics().mostUsedQuestion.text }}</p>
+              <p><strong>Used in:</strong> {{ statistics().mostUsedQuestion.usageCount }} quiz(es)</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button class="btn-primary" (click)="isStatisticsModalOpen.set(false)">
+        Close
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Question Modal -->
+<div class="modal-overlay" *ngIf="isEditModalOpen()">
+  <div class="modal-content question-modal" [class.fullscreen]="isFullscreen()">
+    <div class="modal-header">
+      <div class="modal-title">
+        <h2>Edit Question</h2>
+        <p class="modal-subtitle">Update question details and options</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-icon" (click)="toggleFullscreen()" [title]="isFullscreen() ? 'Exit fullscreen' : 'Fullscreen'">
+          <app-maximize-icon [size]="20" *ngIf="!isFullscreen()"></app-maximize-icon>
+          <app-minimize-icon [size]="20" *ngIf="isFullscreen()"></app-minimize-icon>
+        </button>
+        <button class="btn-icon" (click)="isEditModalOpen.set(false)">
+          <app-x-icon [size]="20"></app-x-icon>
+        </button>
+      </div>
+    </div>
+    
+    <div class="modal-body">
+      <form [formGroup]="questionForm" class="question-form">
+        <div class="form-section">
+          <label>Question Text *</label>
+          <textarea 
+            formControlName="text" 
+            class="form-control textarea" 
+            rows="4" 
+            placeholder="Enter your question here..."
+          ></textarea>
+          <div class="form-error" *ngIf="getFormFieldError('text')">
+            {{ getFormFieldError('text') }}
+          </div>
+        </div>
+        
+        <!-- Add more form fields here as needed -->
+        
+        <div class="modal-footer">
+          <div class="footer-left">
+            <button class="btn-outline" (click)="duplicateQuestion(selectedQuestion()!)">
+              <app-copy-icon [size]="16"></app-copy-icon>
+              Duplicate
+            </button>
+            <button class="btn-outline danger" (click)="confirmDelete(selectedQuestion()!)">
+              <app-delete-icon [size]="16"></app-delete-icon>
+              Delete
+            </button>
+          </div>
+          <div class="footer-right">
+            <button class="btn-outline" (click)="isEditModalOpen.set(false)">
+              Cancel
+            </button>
+            <button class="btn-primary" (click)="saveQuestion()">
+              <app-save-icon [size]="16"></app-save-icon>
+              Save Changes
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Create Question Modal -->
+<div class="modal-overlay" *ngIf="isCreateModalOpen()">
+  <div class="modal-content question-modal" [class.fullscreen]="isFullscreen()">
+    <div class="modal-header">
+      <div class="modal-title">
+        <h2>Create New Question</h2>
+        <p class="modal-subtitle">Add a new question to the bank</p>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-icon" (click)="toggleFullscreen()" [title]="isFullscreen() ? 'Exit fullscreen' : 'Fullscreen'">
+          <app-maximize-icon [size]="20" *ngIf="!isFullscreen()"></app-maximize-icon>
+          <app-minimize-icon [size]="20" *ngIf="isFullscreen()"></app-minimize-icon>
+        </button>
+        <button class="btn-icon" (click)="isCreateModalOpen.set(false)">
+          <app-x-icon [size]="20"></app-x-icon>
+        </button>
+      </div>
+    </div>
+    
+    <div class="modal-body">
+      <form [formGroup]="questionForm" class="question-form">
+        <!-- Quick Type Selector - Simplified without missing icons -->
+        <div class="form-section quick-types">
+          <label>Quick Select</label>
+          <div class="quick-type-grid">
+            <button 
+              type="button" 
+              class="quick-type-btn"
+              (click)="questionForm.get('type')?.setValue('multiple_choice')"
+            >
+              <div class="quick-type-icon">
+                <app-quiz-icon [size]="24" [color]="'#6b8e7f'"></app-quiz-icon>
+              </div>
+              <span>Multiple Choice</span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="quick-type-btn"
+              (click)="questionForm.get('type')?.setValue('true_false')"
+            >
+              <div class="quick-type-icon">
+                <app-check-circle-icon [size]="24" [color]="'#3b82f6'"></app-check-circle-icon>
+              </div>
+              <span>True/False</span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="quick-type-btn"
+              (click)="questionForm.get('type')?.setValue('short_answer')"
+            >
+              <div class="quick-type-icon">
+                <app-edit-icon [size]="24" [color]="'#f59e0b'"></app-edit-icon>
+              </div>
+              <span>Short Answer</span>
+            </button>
+            
+            <button 
+              type="button" 
+              class="quick-type-btn"
+              (click)="questionForm.get('type')?.setValue('essay')"
+            >
+              <div class="quick-type-icon">
+                <app-file-text-icon [size]="24" [color]="'#8b5cf6'"></app-file-text-icon>
+              </div>
+              <span>Essay</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Question Type Details -->
+        <div class="form-section">
+          <label>Question Type *</label>
+          <select formControlName="type" class="form-control">
+            <option *ngFor="let type of getQuestionTypeOptions()" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+          <div class="form-help">
+            {{ getCurrentQuestionTypeDescription() }}
+          </div>
+        </div>
+
+        <!-- Course and Settings -->
+        <div class="form-row">
+          <div class="form-group">
+            <label>Course *</label>
+            <select formControlName="courseId" class="form-control">
+              <option value="">Select a course</option>
+              <option *ngFor="let course of courses()" [value]="course.id">
+                {{ course.code }} - {{ course.name }}
+              </option>
+            </select>
+            <div class="form-error" *ngIf="getFormFieldError('courseId')">
+              {{ getFormFieldError('courseId') }}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>Difficulty *</label>
+            <select formControlName="difficulty" class="form-control">
+              <option *ngFor="let level of difficultyLevels" [value]="level">
+                {{ getCapitalizedDifficulty(level) }}
+              </option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>Points *</label>
+            <input type="number" formControlName="points" class="form-control" min="1" max="100">
+            <div class="form-error" *ngIf="getFormFieldError('points')">
+              {{ getFormFieldError('points') }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Question Text -->
+        <div class="form-section">
+          <label>Question Text *</label>
+          <textarea 
+            formControlName="text" 
+            class="form-control textarea" 
+            rows="4" 
+            placeholder="What is the capital of France?"
+            #questionText
+          ></textarea>
+          <div class="textarea-footer">
+            <span class="char-count">{{ questionText.value.length }} characters</span>
+            <div class="format-buttons">
+              <button type="button" class="format-btn" title="Bold">
+                <strong>B</strong>
+              </button>
+              <button type="button" class="format-btn" title="Italic">
+                <em>I</em>
+              </button>
+            </div>
+          </div>
+          <div class="form-error" *ngIf="getFormFieldError('text')">
+            {{ getFormFieldError('text') }}
+          </div>
+        </div>
+
+        <!-- Dynamic Fields Based on Type -->
+        <ng-container [ngSwitch]="questionForm.get('type')?.value">
+          
+          <!-- Multiple Choice Options -->
+          <div class="form-section" *ngSwitchCase="'multiple_choice'">
+            <div class="section-header">
+              <label>Options *</label>
+              <div class="section-actions">
+                <button type="button" class="btn-outline btn-sm" (click)="addOption()">
+                  <app-plus-icon [size]="16"></app-plus-icon>
+                  Add Option
+                </button>
+                <button type="button" class="btn-outline btn-sm" (click)="questionOptions.set([
+                  {id: '1', text: '', isCorrect: true, order: 1},
+                  {id: '2', text: '', isCorrect: false, order: 2},
+                  {id: '3', text: '', isCorrect: false, order: 3},
+                  {id: '4', text: '', isCorrect: false, order: 4}
+                ])">
+                  <app-copy-icon [size]="16"></app-copy-icon>
+                  4 Default Options
+                </button>
+              </div>
+            </div>
+            
+            <div class="options-list">
+              <div class="option-item" *ngFor="let option of questionOptions()">
+                <div class="option-controls">
+                  <button 
+                    type="button" 
+                    class="option-correct-btn" 
+                    [class.correct]="option.isCorrect"
+                    (click)="toggleCorrectOption(option.id)"
+                  >
+                    <app-check-icon [size]="12" *ngIf="option.isCorrect"></app-check-icon>
+                  </button>
+                  <span class="option-number">{{ getOptionLetter(option.order) }}</span>
+                </div>
+                <input 
+                  type="text" 
+                  [(ngModel)]="option.text"
+                  [ngModelOptions]="{standalone: true}"
+                  class="form-control option-input"
+                  placeholder="Enter option text..."
+                />
+                <button 
+                  type="button" 
+                  class="btn-icon danger" 
+                  (click)="removeOption(option.id)"
+                  [disabled]="questionOptions().length <= 2"
+                >
+                  <app-trash2-icon [size]="16"></app-trash2-icon>
+                </button>
+              </div>
+            </div>
+            
+            <div class="form-help">
+              <app-info-icon [size]="14" [color]="'#6b7280'"></app-info-icon>
+              <span>Click the check button to mark correct answers. Multiple correct answers are allowed.</span>
+            </div>
+          </div>
+
+          <!-- True/False Options -->
+          <div class="form-section" *ngSwitchCase="'true_false'">
+            <label>Options</label>
+            <div class="true-false-options">
+              <div class="tf-option" [class.correct]="questionOptions()[0]?.isCorrect">
+                <button 
+                  type="button" 
+                  class="tf-btn"
+                  (click)="toggleCorrectOption('1')"
+                >
+                  <div class="tf-icon">
+                    <app-check-circle-icon [size]="20" *ngIf="questionOptions()[0]?.isCorrect"></app-check-circle-icon>
+                  </div>
+                  <div class="tf-content">
+                    <strong>True</strong>
+                    <p>This statement is correct</p>
+                  </div>
+                </button>
+              </div>
+              
+              <div class="tf-option" [class.correct]="questionOptions()[1]?.isCorrect">
+                <button 
+                  type="button" 
+                  class="tf-btn"
+                  (click)="toggleCorrectOption('2')"
+                >
+                  <div class="tf-icon">
+                    <app-check-circle-icon [size]="20" *ngIf="questionOptions()[1]?.isCorrect"></app-check-circle-icon>
+                  </div>
+                  <div class="tf-content">
+                    <strong>False</strong>
+                    <p>This statement is incorrect</p>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Short Answer -->
+          <div class="form-section" *ngSwitchCase="'short_answer'">
+            <label>Correct Answer (Optional)</label>
+            <textarea 
+              formControlName="correctAnswer" 
+              class="form-control textarea" 
+              rows="2" 
+              placeholder="Enter expected answer..."
+            ></textarea>
+            <div class="form-help">
+              Provide a sample answer or key points for grading
+            </div>
+          </div>
+
+          <!-- Essay -->
+          <div class="form-section" *ngSwitchCase="'essay'">
+            <label>Grading Rubric (Optional)</label>
+            <textarea 
+              formControlName="correctAnswer" 
+              class="form-control textarea" 
+              rows="4" 
+              placeholder="Provide grading criteria..."
+            ></textarea>
+            <div class="form-help">
+              Outline what makes a good answer for grading purposes
+            </div>
+          </div>
+
+        </ng-container>
+
+        <!-- Additional Metadata -->
+        <div class="form-section">
+          <div class="section-header">
+            <label>Additional Information</label>
+            <button type="button" class="btn-outline btn-sm" (click)="toggleAdditionalInfo()">
+              <app-chevron-down-icon [size]="16"></app-chevron-down-icon>
+              {{ showAdditionalInfo() ? 'Show Less' : 'Show More' }}
+            </button>
+          </div>
+          
+          <div class="additional-fields" *ngIf="showAdditionalInfo()">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Topic</label>
+                <input type="text" formControlName="topic" class="form-control" placeholder="e.g., Calculus, Programming">
+              </div>
+              
+              <div class="form-group">
+                <label>Tags</label>
+                <input type="text" formControlName="tags" class="form-control" placeholder="exam, homework, chapter-1">
+                <div class="form-help">Separate with commas</div>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label>Explanation (Optional)</label>
+              <textarea 
+                formControlName="explanation" 
+                class="form-control textarea" 
+                rows="2" 
+                placeholder="Why is this the correct answer?"
+              ></textarea>
+              <div class="form-help">Shown during answer review</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Template Section -->
+        <div class="form-section template-section">
+          <label>Save as Template</label>
+          <div class="template-options">
+            <label class="template-option">
+              <input type="checkbox" />
+              <div class="template-info">
+                <strong>Save as reusable template</strong>
+                <p>This question can be used as a starting point for future questions</p>
+              </div>
+            </label>
+          </div>
+        </div>
+      </form>
+    </div>
+    
+    <div class="modal-footer">
+      <div class="footer-left">
+        <button class="btn-outline" (click)="isCreateModalOpen.set(false)">
+          Cancel
+        </button>
+      </div>
+      <div class="footer-right">
+        <button class="btn-secondary" (click)="saveQuestion()">
+          <app-save-icon [size]="16"></app-save-icon>
+          Save & Add Another
+        </button>
+        <button class="btn-primary" (click)="saveQuestion()">
+          <app-check-icon [size]="16"></app-check-icon>
+          Save Question
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
