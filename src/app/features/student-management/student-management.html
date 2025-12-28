@@ -1,1 +1,910 @@
-<p>student-management works!</p>
+<div class="student-management">
+  <!-- Header -->
+  <div class="modern-card header-card">
+    <div class="header-content">
+      <div class="header-left">
+        <h1>
+          <app-users-icon [size]="24" color="#2d2d2d"></app-users-icon>
+          Student Management
+        </h1>
+        <p class="header-subtitle">Manage student accounts, access, and academic information</p>
+      </div>
+      <div class="header-right">
+        <button class="modern-btn primary-btn" (click)="openCreateModal()">
+          <app-plus-icon [size]="16"></app-plus-icon>
+          Add New Student
+        </button>
+        <button class="modern-btn secondary-btn" (click)="toggleFilters()">
+          <app-filter-icon [size]="16"></app-filter-icon>
+          Filters
+          <span class="filter-badge" *ngIf="hasActiveFilters()">
+            {{ hasActiveFilters() ? 'Active' : '' }}
+          </span>
+        </button>
+        <button class="modern-btn icon-btn" (click)="refreshData()" [disabled]="isLoading()">
+          <app-refresh-icon [size]="16" [class.spinning]="isLoading()"></app-refresh-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-section">
+      <div class="search-box">
+        <app-search-icon [size]="18" color="#888"></app-search-icon>
+        <input 
+          type="text" 
+          placeholder="Search students by name, ID, or email..." 
+          [ngModel]="searchQuery()"
+          (ngModelChange)="searchQuery.set($event); currentPage.set(1); updateTotalPages()">
+        <div class="search-stats">
+          <span *ngIf="getFilteredCount() !== getTotalCount()">
+            {{ getFilteredCount() }} of {{ getTotalCount() }}
+          </span>
+          <span *ngIf="getFilteredCount() === getTotalCount()">
+            {{ getTotalCount() }} students
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filters Panel -->
+    <div class="filters-panel" *ngIf="showFilters()">
+      <div class="filters-header">
+        <h3>Filter Students</h3>
+        <button class="clear-btn" (click)="clearFilters()" *ngIf="hasActiveFilters()">
+          Clear All
+        </button>
+      </div>
+      
+      <div class="filters-grid">
+        <!-- Class Filter -->
+        <div class="filter-group">
+          <label>Class</label>
+          <select 
+            class="modern-select" 
+            [ngModel]="selectedClass()"
+            (ngModelChange)="selectedClass.set($event); currentPage.set(1); updateTotalPages()">
+            <option value="">All Classes</option>
+            <option *ngFor="let cls of classes()" [value]="cls.id">
+              {{ cls.name }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Department Filter -->
+        <div class="filter-group">
+          <label>Department</label>
+          <select 
+            class="modern-select" 
+            [ngModel]="selectedDepartment()"
+            (ngModelChange)="selectedDepartment.set($event); currentPage.set(1); updateTotalPages()">
+            <option value="">All Departments</option>
+            <option *ngFor="let dept of departments()" [value]="dept">
+              {{ dept }}
+            </option>
+          </select>
+        </div>
+
+        <!-- Status Filters -->
+        <div class="filter-group">
+          <label>Status</label>
+          <div class="filter-chips">
+            <button 
+              *ngFor="let status of statusOptions" 
+              class="filter-chip" 
+              [class.active]="selectedStatus().includes(status.value)"
+              [style.border-color]="status.color"
+              (click)="toggleStatus(status.value)">
+              <span class="chip-dot" [style.background]="status.color"></span>
+              {{ status.label }}
+              <app-check-icon 
+                [size]="12" 
+                *ngIf="selectedStatus().includes(status.value)"
+                color="white">
+              </app-check-icon>
+            </button>
+          </div>
+        </div>
+
+        <!-- Verification Status Filters -->
+        <div class="filter-group">
+          <label>Verification Status</label>
+          <div class="filter-chips">
+            <button 
+              *ngFor="let status of verificationOptions" 
+              class="filter-chip" 
+              [class.active]="selectedVerificationStatus().includes(status.value)"
+              [style.border-color]="status.color"
+              (click)="toggleVerificationStatus(status.value)">
+              <span class="chip-dot" [style.background]="status.color"></span>
+              {{ status.label }}
+              <app-check-icon 
+                [size]="12" 
+                *ngIf="selectedVerificationStatus().includes(status.value)"
+                color="white">
+              </app-check-icon>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="quick-stats">
+    <div class="stats-card">
+      <div class="stat-item">
+        <div class="stat-icon">
+          <app-users-icon [size]="20" color="#6b8e7f"></app-users-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ studentStats().total }}</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+      </div>
+      
+      <div class="stat-item">
+        <div class="stat-icon">
+          <app-check-circle-icon [size]="20" color="#10b981"></app-check-circle-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ studentStats().verified }}</div>
+          <div class="stat-label">Verified</div>
+        </div>
+      </div>
+      
+      <div class="stat-item">
+        <div class="stat-icon">
+          <app-alert-circle-icon [size]="20" color="#f59e0b"></app-alert-circle-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ studentStats().pendingVerification }}</div>
+          <div class="stat-label">Pending Verification</div>
+        </div>
+      </div>
+      
+      <div class="stat-item">
+        <div class="stat-icon">
+          <app-bar-chart-icon [size]="20" color="#3b82f6"></app-bar-chart-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">
+            {{ studentStats().averageScore | number:'1.0-1' }}%
+          </div>
+          <div class="stat-label">Avg. Score</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading() && students().length === 0">
+    <div class="loading-spinner"></div>
+    <p>Loading students...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!isLoading() && filteredStudents().length === 0">
+    <div class="empty-icon">
+      <app-users-icon [size]="48" color="#888"></app-users-icon>
+    </div>
+    <h3>No students found</h3>
+    <p *ngIf="hasActiveFilters()">
+      Try adjusting your filters or 
+      <button class="text-btn" (click)="clearFilters()">clear all filters</button>
+    </p>
+    <p *ngIf="!hasActiveFilters()">
+      Get started by adding your first student
+    </p>
+    <button class="modern-btn primary-btn" (click)="openCreateModal()">
+      <app-plus-icon [size]="16"></app-plus-icon>
+      Add New Student
+    </button>
+  </div>
+
+  <!-- Students Table -->
+  <div class="students-container" *ngIf="!isLoading() && filteredStudents().length > 0">
+    <div class="students-header">
+      <div class="students-count">
+        <h3>Students</h3>
+        <span class="count-badge">{{ getFilteredCount() }} students</span>
+      </div>
+      <div class="students-actions">
+        <button class="modern-btn secondary-btn" (click)="exportStudentData()">
+          <app-download-icon [size]="16"></app-download-icon>
+          Export
+        </button>
+        <button class="modern-btn secondary-btn" (click)="importStudentData()">
+          <app-upload-icon [size]="16"></app-upload-icon>
+          Import
+        </button>
+      </div>
+    </div>
+
+    <div class="modern-table">
+      <div class="table-header">
+        <div class="table-row">
+          <div class="table-cell">Student Information</div>
+          <div class="table-cell">Academic Info</div>
+          <div class="table-cell">Status</div>
+          <div class="table-cell">Performance</div>
+          <div class="table-cell">Last Activity</div>
+          <div class="table-cell">Actions</div>
+        </div>
+      </div>
+      
+      <div class="table-body">
+        <div class="table-row" *ngFor="let student of paginatedStudents()">
+          <!-- Student Information -->
+          <div class="table-cell student-info">
+            <div class="student-avatar">
+              <div class="avatar-circle">
+                {{ student.firstName.charAt(0) }}{{ student.lastName.charAt(0) }}
+              </div>
+            </div>
+            <div class="student-details">
+              <div class="student-name">
+                {{ student.firstName }} {{ student.lastName }}
+              </div>
+              <div class="student-meta">
+                <span class="student-id">{{ student.studentId }}</span>
+                <span class="meta-dot">•</span>
+                <span class="student-email">{{ student.email }}</span>
+              </div>
+              <div class="student-contact" *ngIf="student.phoneNumber">
+                <app-phone-icon [size]="12" color="#888"></app-phone-icon>
+                {{ student.phoneNumber }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Academic Information -->
+          <div class="table-cell academic-info">
+            <div class="academic-item">
+              <div class="academic-label">Class</div>
+              <div class="academic-value">{{ getClassName(student.currentClassId) }}</div>
+            </div>
+            <div class="academic-item">
+              <div class="academic-label">Department</div>
+              <div class="academic-value">{{ student.department }}</div>
+            </div>
+            <div class="academic-item">
+              <div class="academic-label">Enrolled</div>
+              <div class="academic-value">{{ formatDate(student.enrollmentDate) }}</div>
+            </div>
+          </div>
+
+          <!-- Status -->
+          <div class="table-cell status-info">
+            <div class="status-badges">
+              <span class="status-badge" [style.background]="getStatusColor(student.status)">
+                {{ student.status }}
+              </span>
+              <span class="verification-badge" [style.background]="getVerificationColor(student.verificationStatus)">
+                {{ student.verificationStatus }}
+              </span>
+            </div>
+            <div class="status-meta" *ngIf="student.lastLoginAt">
+              <app-clock-icon [size]="12" color="#888"></app-clock-icon>
+              Last login: {{ formatDateTime(student.lastLoginAt) }}
+            </div>
+          </div>
+
+          <!-- Performance -->
+          <div class="table-cell performance-info">
+            <div class="performance-stats">
+              <div class="performance-item">
+                <div class="performance-label">Quizzes Taken</div>
+                <div class="performance-value">{{ student.totalQuizzesTaken }}</div>
+              </div>
+              <div class="performance-item">
+                <div class="performance-label">Average Score</div>
+                <div class="performance-value" [style.color]="getPerformanceColor(student.averageScore)">
+                  {{ student.averageScore || 0 | number:'1.0-1' }}%
+                </div>
+              </div>
+            </div>
+            <div class="performance-progress" *ngIf="student.averageScore">
+              <div class="progress-bar">
+                <div class="progress-fill" [style.width]="student.averageScore + '%'"
+                     [style.background]="getPerformanceColor(student.averageScore)"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Last Activity -->
+          <div class="table-cell activity-info">
+            <div class="activity-time">
+              {{ getLastActivityTime(student) }}
+            </div>
+            <div class="activity-actions" *ngIf="student.totalQuizzesTaken > 0">
+              <button class="text-btn small" (click)="viewStudent(student)">
+                View Activity
+              </button>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="table-cell actions-info">
+            <div class="action-buttons">
+              <button class="action-btn" (click)="viewStudent(student)" title="View Details">
+                <app-eye-icon [size]="16"></app-eye-icon>
+              </button>
+              <button class="action-btn" (click)="editStudent(student)" title="Edit">
+                <app-edit-icon [size]="16"></app-edit-icon>
+              </button>
+              <div class="dropdown">
+                <button class="action-btn more-btn">
+                  <app-more-icon [size]="16"></app-more-icon>
+                </button>
+                <div class="dropdown-menu">
+                  <button class="dropdown-item" (click)="verifyStudent(student)" 
+                          *ngIf="student.verificationStatus !== 'verified'">
+                    <app-check-icon [size]="14"></app-check-icon>
+                    Verify Account
+                  </button>
+                  <button class="dropdown-item" (click)="sendVerificationEmail(student)"
+                          *ngIf="student.verificationStatus !== 'verified'">
+                    <app-send-icon [size]="14"></app-send-icon>
+                    Resend Verification
+                  </button>
+                  <button class="dropdown-item" (click)="resetPassword(student)">
+                    <app-refresh-icon [size]="14"></app-refresh-icon>
+                    Reset Password
+                  </button>
+                  <div class="dropdown-divider"></div>
+                  <button class="dropdown-item delete" (click)="deleteStudent(student)">
+                    <app-delete-icon [size]="14"></app-delete-icon>
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagination -->
+    <div class="pagination" *ngIf="totalPages() > 1">
+      <div class="pagination-info">
+        Showing {{ (currentPage() - 1) * pageSize() + 1 }} to 
+        {{ Math.min(currentPage() * pageSize(), getFilteredCount()) }} of {{ getFilteredCount() }}
+      </div>
+      <div class="pagination-controls">
+        <button class="pagination-btn" [disabled]="currentPage() === 1" (click)="prevPage()">
+          <app-chevron-left-icon [size]="16"></app-chevron-left-icon>
+        </button>
+        
+        <div class="pagination-pages">
+          <button *ngFor="let page of getPageNumbers()" 
+                  class="page-btn" 
+                  [class.active]="page === currentPage()"
+                  (click)="goToPage(page)">
+            {{ page }}
+          </button>
+          <span class="page-dots" *ngIf="totalPages() > 7 && currentPage() < totalPages() - 3">
+            ...
+          </span>
+        </div>
+        
+        <button class="pagination-btn" [disabled]="currentPage() === totalPages()" (click)="nextPage()">
+          <app-chevron-right-icon [size]="16"></app-chevron-right-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Student Modal -->
+  <div class="modal-overlay" *ngIf="showCreateModal()" (click)="closeCreateModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2>
+            <app-users-icon [size]="24" color="#2d2d2d"></app-users-icon>
+            Add New Student
+          </h2>
+        </div>
+        <button class="modal-close" (click)="closeCreateModal()">
+          <app-x-icon [size]="20"></app-x-icon>
+        </button>
+      </div>
+
+      <div class="modal-content">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="firstName">
+              <app-user-icon [size]="16" color="#6b8e7f"></app-user-icon>
+              First Name *
+            </label>
+            <input 
+              type="text" 
+              id="firstName" 
+              placeholder="Enter first name"
+              [ngModel]="studentForm().firstName"
+              (ngModelChange)="updateFormField('firstName', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="lastName">
+              <app-user-icon [size]="16" color="#6b8e7f"></app-user-icon>
+              Last Name *
+            </label>
+            <input 
+              type="text" 
+              id="lastName" 
+              placeholder="Enter last name"
+              [ngModel]="studentForm().lastName"
+               (ngModelChange)="updateFormField('lastName', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="email">
+              <app-mail-icon [size]="16" color="#6b8e7f"></app-mail-icon>
+              Email *
+            </label>
+            <input 
+              type="email" 
+              id="email" 
+              placeholder="student@university.edu"
+              [ngModel]="studentForm().email"
+              (ngModelChange)="updateFormField('email', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="studentId">
+              <app-hash-icon [size]="16" color="#6b8e7f"></app-hash-icon>
+              Student ID
+            </label>
+            <input 
+              type="text" 
+              id="studentId" 
+              placeholder="Auto-generated if empty"
+              [ngModel]="studentForm().studentId"
+              (ngModelChange)="updateFormField('studentId', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="dateOfBirth">
+              <app-calendar-icon [size]="16" color="#6b8e7f"></app-calendar-icon>
+              Date of Birth
+            </label>
+            <input 
+              type="date" 
+              id="dateOfBirth"
+              [ngModel]="studentForm().dateOfBirth"
+              (ngModelChange)="updateFormField('dateOfBirth', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="gender">
+              <app-user-icon [size]="16" color="#6b8e7f"></app-user-icon>
+              Gender
+            </label>
+            <select 
+              id="gender"
+              [ngModel]="studentForm().gender"
+              (ngModelChange)="updateFormField('gender', $event)">
+              <option value="">Select gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="phoneNumber">
+              <app-phone-icon [size]="16" color="#6b8e7f"></app-phone-icon>
+              Phone Number
+            </label>
+            <input 
+              type="tel" 
+              id="phoneNumber" 
+              placeholder="+1234567890"
+              [ngModel]="studentForm().phoneNumber"
+              (ngModelChange)="updateFormField('phoneNumber', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="currentClassId">
+              <app-school-icon [size]="16" color="#6b8e7f"></app-school-icon>
+              Class *
+            </label>
+            <select 
+              id="currentClassId"
+              [ngModel]="studentForm().currentClassId"
+              (ngModelChange)="updateFormField('currentClassId', $event)">
+              <option value="">Select class</option>
+              <option *ngFor="let cls of classes()" [value]="cls.id">
+                {{ cls.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="department">
+              <app-building-icon [size]="16" color="#6b8e7f"></app-building-icon>
+              Department *
+            </label>
+            <select 
+              id="department"
+              [ngModel]="studentForm().department"
+              (ngModelChange)="updateFormField('department', $event)">
+              <option value="">Select department</option>
+              <option *ngFor="let dept of departments()" [value]="dept">
+                {{ dept }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="address">
+              <app-map-pin-icon [size]="16" color="#6b8e7f"></app-map-pin-icon>
+              Address
+            </label>
+            <input 
+              type="text" 
+              id="address" 
+              placeholder="Enter address"
+              [ngModel]="studentForm().address"
+              (ngModelChange)="updateFormField('address', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="emergencyContact">
+              <app-user-check-icon [size]="16" color="#6b8e7f"></app-user-check-icon>
+              Emergency Contact
+            </label>
+            <input 
+              type="text" 
+              id="emergencyContact" 
+              placeholder="Contact name"
+              [ngModel]="studentForm().emergencyContact"
+              (ngModelChange)="updateFormField('emergencyContact', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="emergencyPhone">
+              <app-phone-icon [size]="16" color="#6b8e7f"></app-phone-icon>
+              Emergency Phone
+            </label>
+            <input 
+              type="tel" 
+              id="emergencyPhone" 
+              placeholder="+1234567890"
+              [ngModel]="studentForm().emergencyPhone"
+              (ngModelChange)="updateFormField('emergencyContact', $event)">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button class="modern-btn secondary-btn" (click)="closeCreateModal()">
+            Cancel
+          </button>
+          <button 
+            class="modern-btn primary-btn" 
+            (click)="createStudent()"
+            [disabled]="isLoading() || !isFormValid()">
+            <app-save-icon [size]="16" *ngIf="!isLoading()"></app-save-icon>
+            <app-refresh-icon [size]="16" class="spinning" *ngIf="isLoading()"></app-refresh-icon>
+            {{ isLoading() ? 'Creating...' : 'Create Student' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Student Modal -->
+  <div class="modal-overlay" *ngIf="showViewModal()" (click)="closeViewModal()">
+    <div class="modal-container wide" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2>
+            <app-users-icon [size]="24" color="#2d2d2d"></app-users-icon>
+            Student Details: {{ selectedStudent()?.firstName }} {{ selectedStudent()?.lastName }}
+          </h2>
+        </div>
+        <button class="modal-close" (click)="closeViewModal()">
+          <app-x-icon [size]="20"></app-x-icon>
+        </button>
+      </div>
+
+      <div class="modal-content" *ngIf="selectedStudent()">
+        <div class="student-profile">
+          <div class="profile-header">
+            <div class="profile-avatar">
+              <div class="avatar-large">
+                {{ selectedStudent()!.firstName.charAt(0) }}{{ selectedStudent()!.lastName.charAt(0) }}
+              </div>
+            </div>
+            <div class="profile-info">
+              <h3>{{ selectedStudent()!.firstName }} {{ selectedStudent()!.lastName }}</h3>
+              <div class="profile-meta">
+                <span class="meta-item">
+                  <app-hash-icon [size]="14" color="#888"></app-hash-icon>
+                  {{ selectedStudent()!.studentId }}
+                </span>
+                <span class="meta-item">
+                  <app-mail-icon [size]="14" color="#888"></app-mail-icon>
+                  {{ selectedStudent()!.email }}
+                </span>
+                <span class="meta-item" *ngIf="selectedStudent()!.phoneNumber">
+                  <app-phone-icon [size]="14" color="#888"></app-phone-icon>
+                  {{ selectedStudent()!.phoneNumber }}
+                </span>
+              </div>
+              <div class="profile-status">
+                <span class="status-badge" [style.background]="getStatusColor(selectedStudent()!.status)">
+                  {{ selectedStudent()!.status }}
+                </span>
+                <span class="verification-badge" [style.background]="getVerificationColor(selectedStudent()!.verificationStatus)">
+                  {{ selectedStudent()!.verificationStatus }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-grid">
+            <div class="profile-section">
+              <h4>Academic Information</h4>
+              <div class="info-grid">
+                <div class="info-item">
+                  <div class="info-label">Class</div>
+                  <div class="info-value">{{ getClassName(selectedStudent()!.currentClassId) }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Department</div>
+                  <div class="info-value">{{ selectedStudent()!.department }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Enrollment Date</div>
+                  <div class="info-value">{{ formatDate(selectedStudent()!.enrollmentDate) }}</div>
+                </div>
+                <div class="info-item">
+                  <div class="info-label">Academic Year</div>
+                  <div class="info-value">{{ selectedStudent()!.academicYearId }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-section">
+              <h4>Performance</h4>
+              <div class="performance-stats">
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <app-bar-chart-icon [size]="20" color="#6b8e7f"></app-bar-chart-icon>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value">{{ selectedStudent()!.totalQuizzesTaken }}</div>
+                    <div class="stat-label">Quizzes Taken</div>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <app-award-icon [size]="20" color="#f59e0b"></app-award-icon>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value" [style.color]="getPerformanceColor(selectedStudent()!.averageScore)">
+                      {{ selectedStudent()!.averageScore || 0 | number:'1.0-1' }}%
+                    </div>
+                    <div class="stat-label">Average Score</div>
+                  </div>
+                </div>
+                <div class="stat-card">
+                  <div class="stat-icon">
+                    <app-clock-icon [size]="20" color="#3b82f6"></app-clock-icon>
+                  </div>
+                  <div class="stat-content">
+                    <div class="stat-value">
+                      {{ getLastActivityTime(selectedStudent()!) }}
+                    </div>
+                    <div class="stat-label">Last Activity</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="profile-section full-width">
+              <h4>Recent Activity</h4>
+              <div class="activity-list">
+                <div *ngFor="let activity of getStudentActivities(selectedStudent()!.id)" 
+                     class="activity-item">
+                  <div class="activity-icon">
+                    <app-check-circle-icon [size]="16" color="#10b981"></app-check-circle-icon>
+                  </div>
+                  <div class="activity-content">
+                    <div class="activity-title">
+                      {{ activity.quizTitle }}
+                    </div>
+                    <div class="activity-meta">
+                      <span class="meta-item">
+                        <app-award-icon [size]="12" color="#f59e0b"></app-award-icon>
+                        Score: {{ activity.score }}%
+                      </span>
+                      <span class="meta-item">
+                        <app-clock-icon [size]="12" color="#3b82f6"></app-clock-icon>
+                        Time: {{ activity.timeSpent }} min
+                      </span>
+                      <span class="meta-item">
+                        <app-calendar-icon [size]="12" color="#888"></app-calendar-icon>
+                        {{ formatDateTime(activity.completedAt) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div class="no-activity" *ngIf="getStudentActivities(selectedStudent()!.id).length === 0">
+                  No recent activity
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button class="modern-btn secondary-btn" (click)="closeViewModal()">
+            Close
+          </button>
+          <button class="modern-btn primary-btn" (click)="editStudent(selectedStudent()!)">
+            <app-edit-icon [size]="16"></app-edit-icon>
+            Edit Student
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Student Modal -->
+  <div class="modal-overlay" *ngIf="showEditModal()" (click)="closeEditModal()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <div class="modal-title">
+          <h2>
+            <app-edit-icon [size]="24" color="#2d2d2d"></app-edit-icon>
+            Edit Student: {{ selectedStudent()?.firstName }} {{ selectedStudent()?.lastName }}
+          </h2>
+        </div>
+        <button class="modal-close" (click)="closeEditModal()">
+          <app-x-icon [size]="20"></app-x-icon>
+        </button>
+      </div>
+
+      <div class="modal-content">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="editFirstName">
+              <app-user-icon [size]="16" color="#6b8e7f"></app-user-icon>
+              First Name *
+            </label>
+            <input 
+              type="text" 
+              id="editFirstName" 
+              placeholder="Enter first name"
+              [ngModel]="studentForm().firstName"
+              (ngModelChange)="updateFormField('firstName', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="editLastName">
+              <app-user-icon [size]="16" color="#6b8e7f"></app-user-icon>
+              Last Name *
+            </label>
+            <input 
+              type="text" 
+              id="editLastName" 
+              placeholder="Enter last name"
+              [ngModel]="studentForm().lastName"
+               (ngModelChange)="updateFormField('lastName', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="editEmail">
+              <app-mail-icon [size]="16" color="#6b8e7f"></app-mail-icon>
+              Email *
+            </label>
+            <input 
+              type="email" 
+              id="editEmail" 
+              placeholder="student@university.edu"
+              [ngModel]="studentForm().email"
+              (ngModelChange)="updateFormField('email', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="editStudentId">
+              <app-hash-icon [size]="16" color="#6b8e7f"></app-hash-icon>
+              Student ID *
+            </label>
+            <input 
+              type="text" 
+              id="editStudentId" 
+              placeholder="Student ID"
+              [ngModel]="studentForm().studentId"
+              (ngModelChange)="updateFormField('studentId', $event)">
+          </div>
+
+          <div class="form-group">
+            <label for="editCurrentClassId">
+              <app-school-icon [size]="16" color="#6b8e7f"></app-school-icon>
+              Class *
+            </label>
+            <select 
+              id="editCurrentClassId"
+              [ngModel]="studentForm().currentClassId"
+              (ngModelChange)="updateFormField('currentClassId', $event)">
+              <option value="">Select class</option>
+              <option *ngFor="let cls of classes()" [value]="cls.id">
+                {{ cls.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="editDepartment">
+              <app-building-icon [size]="16" color="#6b8e7f"></app-building-icon>
+              Department *
+            </label>
+            <select 
+              id="editDepartment"
+              [ngModel]="studentForm().department"
+              (ngModelChange)="updateFormField('department', $event)">
+              <option value="">Select department</option>
+              <option *ngFor="let dept of departments()" [value]="dept">
+                {{ dept }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="editStatus">
+              <app-user-check-icon [size]="16" color="#6b8e7f"></app-user-check-icon>
+              Status
+            </label>
+            <select 
+              id="editStatus"
+              [ngModel]="selectedStudent()?.status"
+              (ngModelChange)="updateStudentStatus($event)">
+              <option *ngFor="let status of statusOptions" [value]="status.value">
+                {{ status.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="editVerificationStatus">
+              <app-shield-icon [size]="16" color="#6b8e7f"></app-shield-icon>
+              Verification Status
+            </label>
+            <select 
+              id="editVerificationStatus"
+              [ngModel]="selectedStudent()?.verificationStatus"
+              (ngModelChange)="updateVerificationStatus($event)">
+              <option *ngFor="let status of verificationOptions" [value]="status.value">
+                {{ status.label }}
+              </option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-actions">
+          <button class="modern-btn secondary-btn" (click)="closeEditModal()">
+            Cancel
+          </button>
+          <button 
+            class="modern-btn primary-btn" 
+            (click)="updateStudent()"
+            [disabled]="isLoading() || !isFormValid()">
+            <app-save-icon [size]="16" *ngIf="!isLoading()"></app-save-icon>
+            <app-refresh-icon [size]="16" class="spinning" *ngIf="isLoading()"></app-refresh-icon>
+            {{ isLoading() ? 'Updating...' : 'Update Student' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

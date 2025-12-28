@@ -39,14 +39,56 @@ export interface User {
   assignedClasses?: Class[];
 }
 
-export interface AdminUser extends User {
-  isSuperAdmin: boolean;
-  canManageUsers: boolean;
-  canConfigureSystem: boolean;
-  assignedDepartments: string[];
-}
+// export interface AdminUser extends User {
+//   isSuperAdmin: boolean;
+//   canManageUsers: boolean;
+//   canConfigureSystem: boolean;
+//   assignedDepartments: string[];
+// }
 
 // Add LoginResponse interface here
+
+// src/app/models/user.model.ts
+
+export interface AdminUser extends User {
+  // Specific admin properties
+  adminId: string;
+  employeeNumber?: string;
+  position: string;
+  hireDate: Date;
+  
+  // Department assignments
+  managedDepartments: string[];
+  assignedDepartments: string[];
+  
+  // Course assignments
+  managedCourseIds: string[];
+  managedCourses?: Course[]; // Populated from API
+  
+  // Class assignments
+  managedClassIds: string[];
+  managedClasses?: Class[]; // Populated from API
+  
+  // Permissions
+  canCreateQuizzes: boolean;
+  canEditQuizzes: boolean;
+  canDeleteQuizzes: boolean;
+  canViewResponses: boolean;
+  canExportData: boolean;
+  canManageStudents: boolean;
+  canManageQuestions: boolean;
+  canSendNotifications: boolean;
+  canManageUsers: boolean;
+  canConfigureSystem: boolean;
+  
+  // Admin status
+  isSuperAdmin: boolean;
+  
+  // Audit trail
+  lastActivityAt?: Date;
+  totalActions: number;
+}
+
 export interface LoginResponse {
   user: User;
   token: string;

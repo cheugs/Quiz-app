@@ -1639,6 +1639,234 @@ export class SearchPlusIconComponent {
   @Input() iconClass = '';
 }
 
+// Add these to your existing icon-dashboard.ts file
+
+@Component({
+  selector: 'app-phone-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class PhoneIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+@Component({
+  selector: 'app-user-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class UserIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+@Component({
+  selector: 'app-building-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M3 21h18"/>
+        <path d="M19 21V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v14"/>
+        <path d="M9 21v-4h6v4"/>
+        <path d="M10 7h4"/>
+        <path d="M10 11h4"/>
+        <path d="M10 15h4"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class BuildingIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+ 
+// Add these components to your icon-dashboard.ts file
+
+@Component({
+  selector: 'app-map-pin-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class MapPinIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+@Component({
+  selector: 'app-user-check-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="8.5" cy="7" r="4"/>
+        <polyline points="17 11 19 13 23 9"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class UserCheckIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+@Component({
+  selector: 'app-shield-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class ShieldIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+
+
+
+
+
+
+
+ 
+
+@Component({
+  selector: 'app-user-x-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+        <circle cx="8.5" cy="7" r="4"/>
+        <line x1="18" y1="8" x2="23" y2="13"/>
+        <line x1="23" y1="8" x2="18" y2="13"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class UserXIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+ 
+ 
+
+@Component({
+  selector: 'app-key-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class KeyIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+@Component({
+  selector: 'app-lock-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class LockIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+@Component({
+  selector: 'app-unlock-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+        <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class UnlockIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
+@Component({
+  selector: 'app-star-icon',
+  standalone: true,
+  imports: [CommonModule, IconComponent],
+  template: `
+    <app-icon [size]="size" [color]="color" [iconClass]="iconClass">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    </app-icon>
+  `
+})
+export class StarIconComponent {
+  @Input() size = 20;
+  @Input() color = 'currentColor';
+  @Input() iconClass = '';
+}
+
 // Export all icon components
 export const ICON_COMPONENTS = [
   IconComponent,
@@ -1722,5 +1950,16 @@ export const ICON_COMPONENTS = [
   SearchPlusIconComponent,
   ToggleRightIconComponent, // Already exists in your file
   ListIconComponent, // Already exists in your file
-  SuperscriptIconComponent // Already exists in your file 
+  SuperscriptIconComponent, // Already exists in your file 
+  PhoneIconComponent,
+  UserIconComponent,
+  BuildingIconComponent,
+  MapPinIconComponent,
+  UserCheckIconComponent,
+  ShieldIconComponent,
+  UserXIconComponent,
+  KeyIconComponent,
+  LockIconComponent,
+  UnlockIconComponent,
+  StarIconComponent
 ];

@@ -1,10 +1,14 @@
+// src/app/features/user-management/user-management-routing.module.ts
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { UserManagementComponent } from './user-management';
+import { superAdminGuard } from '../../core/guards/super-admin-guard';
 
 const routes: Routes = [
   {
     path: '',
-    loadComponent: () => import('./user-management').then(m => m.UserManagementComponent)
+    component: UserManagementComponent,
+    canActivate: [superAdminGuard]
   }
 ];
 
