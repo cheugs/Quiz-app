@@ -1,22 +1,22 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import MainLayout from './layouts/MainLayout';
+import React, { useState } from 'react';
+import Navigation from './components/Navigation';
 import Dashboard from './pages/Dashboard';
 import QuizStudio from './pages/QuizStudio';
 import Analytics from './pages/Analytics';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('dashboard');
+
   return (
-    <Router>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/quiz-studio" element={<QuizStudio />} />
-          <Route path="/analytics" element={<Analytics />} />
-        </Routes>
-      </MainLayout>
-    </Router>
+    <div className="min-h-screen bg-gray-50">
+      <Navigation currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      
+      <main className="max-w-7xl mx-auto px-8 py-8">
+        {currentPage === 'dashboard' && <Dashboard />}
+        {currentPage === 'quiz-studio' && <QuizStudio />}
+        {currentPage === 'analytics' && <Analytics />}
+      </main>
+    </div>
   );
 }
 

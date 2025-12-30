@@ -6,7 +6,6 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary Blue
         primary: {
           50: '#EFF6FF',
           100: '#DBEAFE',
@@ -19,7 +18,6 @@ module.exports = {
           800: '#1E40AF',
           900: '#1E3A8A',
         },
-        // Semantic Colors
         success: {
           50: '#ECFDF5',
           500: '#10B981',
